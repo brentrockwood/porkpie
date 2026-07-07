@@ -9,6 +9,7 @@ export function App() {
   const [description, setDescription] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
+  const [editingDescription, setEditingDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -35,7 +36,7 @@ export function App() {
   }
 
   async function handleSave(task: Task) {
-    const updated = await updateTask(task.id, { title: editingTitle });
+    const updated = await updateTask(task.id, { title: editingTitle, description: editingDescription });
     setTasks((current) => current.map((item) => (item.id === updated.id ? updated : item)));
     setEditingId(null);
   }
@@ -56,7 +57,7 @@ export function App() {
       <form className="task-form" onSubmit={handleCreate}>
         <label>
           Title
-          <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Buy milk" />
+          <input autoFocus value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Buy milk" />
         </label>
         <label>
           Description
@@ -83,11 +84,20 @@ export function App() {
             />
             <div className="task-content">
               {editingId === task.id ? (
-                <input value={editingTitle} onChange={(event) => setEditingTitle(event.target.value)} />
+                <div className="edit-fields">
+                  <input value={editingTitle} onChange={(event) => setEditingTitle(event.target.value)} />
+                  <textarea
+                    value={editingDescription}
+                    onChange={(event) => setEditingDescription(event.target.value)}
+                    placeholder="Optional details"
+                  />
+                </div>
               ) : (
-                <h2 className={task.completed ? "completed" : ""}>{task.title}</h2>
+                <>
+                  <h2 className={task.completed ? "completed" : ""}>{task.title}</h2>
+                  {task.description ? <p>{task.description}</p> : null}
+                </>
               )}
-              {task.description ? <p>{task.description}</p> : null}
             </div>
             <div className="task-actions">
               {editingId === task.id ? (
@@ -100,6 +110,7 @@ export function App() {
                   onClick={() => {
                     setEditingId(task.id);
                     setEditingTitle(task.title);
+                    setEditingDescription(task.description ?? "");
                   }}
                 >
                   Edit

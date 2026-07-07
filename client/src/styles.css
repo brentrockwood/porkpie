@@ -121,6 +121,11 @@ textarea {
   text-decoration: line-through;
 }
 
+.edit-fields {
+  display: grid;
+  gap: 0.5rem;
+}
+
 .task-actions {
   display: flex;
   gap: 0.5rem;
