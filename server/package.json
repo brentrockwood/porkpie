@@ -8,7 +8,8 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "migrate": "tsx src/db/migrate.ts",
-    "test": "vitest run",
+    "test": "vitest run --exclude tests/system/**",
+    "test:system": "vitest run tests/system",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

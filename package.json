@@ -11,6 +11,8 @@
     "dev": "npm run dev --workspaces --if-present",
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
+    "test:system": "npm run test:system -w @porkpie/server",
+    "test:e2e": "./scripts/browser-smoke.sh",
     "typecheck": "npm run typecheck --workspaces --if-present"
   }
 }

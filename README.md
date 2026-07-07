@@ -56,8 +56,25 @@ The API will be available at <http://localhost:4000> and the client at <http://l
 
 ## Tests
 
+Fast API tests use an in-memory repository and do not require Docker:
+
 ```sh
 npm test
+```
+
+Database-backed system tests run against PostgreSQL:
+
+```sh
+docker compose up -d postgres
+SYSTEM_DATABASE_URL=postgres://porkpie:porkpie@localhost:5432/porkpie npm run test:system
+```
+
+Browser smoke tests use `agent-browser` against the running app:
+
+```sh
+npm install -g agent-browser
+docker compose up -d
+npm run test:e2e
 ```
 
 ## Useful commands

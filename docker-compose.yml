@@ -18,7 +18,7 @@ services:
   server:
     image: node:22-alpine
     working_dir: /app
-    command: sh -c "npm install && npm run migrate -w @porkpie/server && npm run dev -w @porkpie/server"
+    command: sh -c "npm ci && npm run migrate -w @porkpie/server && npm run dev -w @porkpie/server"
     environment:
       PORT: 4000
       DATABASE_URL: postgres://porkpie:porkpie@postgres:5432/porkpie
@@ -27,7 +27,7 @@ services:
       - "4000:4000"
     volumes:
       - .:/app
-      - node-modules:/app/node_modules
+      - server-node-modules:/app/node_modules
     depends_on:
       postgres:
         condition: service_healthy
@@ -35,17 +35,18 @@ services:
   client:
     image: node:22-alpine
     working_dir: /app
-    command: sh -c "npm install && npm run dev -w @porkpie/client"
+    command: sh -c "npm ci && npm run dev -w @porkpie/client"
     environment:
       VITE_API_BASE_URL: http://localhost:4000
     ports:
       - "5173:5173"
     volumes:
       - .:/app
-      - node-modules:/app/node_modules
+      - client-node-modules:/app/node_modules
     depends_on:
       - server
 
 volumes:
   postgres-data:
-  node-modules:
+  server-node-modules:
+  client-node-modules:
