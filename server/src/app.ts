@@ -1,5 +1,7 @@
 import cors from "cors";
 import express from "express";
+import swaggerUi from "swagger-ui-express";
+import { openApiDocument } from "./openapi.js";
 import { ValidationError } from "./tasks/task-service.js";
 import { createTaskRouter } from "./tasks/task-routes.js";
 import type { TaskService } from "./tasks/task-service.js";
@@ -19,6 +21,11 @@ export function createApp(taskService: TaskService, clientOrigin = "http://local
     response.json({ ok: true });
   });
 
+  app.get("/openapi.json", (_request, response) => {
+    response.json(openApiDocument);
+  });
+
+  app.use("/docs", swaggerUi.serve, swaggerUi.setup(openApiDocument));
   app.use("/api/tasks", createTaskRouter(taskService));
 
   app.use((error: unknown, _request: express.Request, response: express.Response, _next: express.NextFunction) => {

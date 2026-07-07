@@ -2,6 +2,8 @@
 
 Base URL in local development: `http://localhost:4000`.
 
+Interactive Swagger UI is available at `/docs`. The raw OpenAPI contract is available at `/openapi.json`.
+
 ## Health
 
 ```text

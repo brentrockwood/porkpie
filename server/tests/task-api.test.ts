@@ -9,6 +9,16 @@ function testApp() {
 }
 
 describe("task API", () => {
+  it("serves OpenAPI documentation", async () => {
+    const app = testApp();
+
+    const spec = await request(app).get("/openapi.json").expect(200);
+    expect(spec.body.openapi).toBe("3.1.0");
+    expect(spec.body.paths["/api/tasks"]).toBeDefined();
+
+    await request(app).get("/docs/").expect(200).expect("Content-Type", /html/);
+  });
+
   it("supports the task lifecycle", async () => {
     const app = testApp();
 
