@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: porkpie
+      POSTGRES_USER: porkpie
+      POSTGRES_PASSWORD: porkpie
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U porkpie -d porkpie"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  server:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run migrate -w @porkpie/server && npm run dev -w @porkpie/server"
+    environment:
+      PORT: 4000
+      DATABASE_URL: postgres://porkpie:porkpie@postgres:5432/porkpie
+      CLIENT_ORIGIN: http://localhost:5173
+    ports:
+      - "4000:4000"
+    volumes:
+      - .:/app
+      - node-modules:/app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  client:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -w @porkpie/client"
+    environment:
+      VITE_API_BASE_URL: http://localhost:4000
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - node-modules:/app/node_modules
+    depends_on:
+      - server
+
+volumes:
+  postgres-data:
+  node-modules:

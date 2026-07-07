@@ -1,0 +1,78 @@
+import { randomUUID } from "node:crypto";
+import type { CreateTaskRequest, Task, UpdateTaskRequest } from "@porkpie/shared";
+import type { AuthContext } from "../auth/auth-context.js";
+import type { TaskRepository } from "./task-repository.js";
+
+export class ValidationError extends Error {}
+
+export class TaskService {
+  constructor(private readonly repository: TaskRepository) {}
+
+  listTasks(auth: AuthContext): Promise<Task[]> {
+    return this.repository.list(auth.userId);
+  }
+
+  getTask(auth: AuthContext, id: string): Promise<Task | null> {
+    return this.repository.findById(auth.userId, id);
+  }
+
+  createTask(auth: AuthContext, input: CreateTaskRequest): Promise<Task> {
+    const title = normalizeTitle(input.title);
+
+    return this.repository.create({
+      id: randomUUID(),
+      userId: auth.userId,
+      title,
+      description: normalizeDescription(input.description),
+    });
+  }
+
+  updateTask(auth: AuthContext, id: string, input: UpdateTaskRequest): Promise<Task | null> {
+    const patch: UpdateTaskRequest = {};
+
+    if (input.title !== undefined) {
+      patch.title = normalizeTitle(input.title);
+    }
+
+    if (input.description !== undefined) {
+      patch.description = normalizeDescription(input.description);
+    }
+
+    if (input.completed !== undefined) {
+      if (typeof input.completed !== "boolean") {
+        throw new ValidationError("completed must be a boolean");
+      }
+      patch.completed = input.completed;
+    }
+
+    return this.repository.update(auth.userId, id, patch);
+  }
+
+  deleteTask(auth: AuthContext, id: string): Promise<boolean> {
+    return this.repository.delete(auth.userId, id);
+  }
+}
+
+function normalizeTitle(value: unknown): string {
+  if (typeof value !== "string") {
+    throw new ValidationError("title is required");
+  }
+
+  const title = value.trim();
+  if (!title) {
+    throw new ValidationError("title is required");
+  }
+
+  return title;
+}
+
+function normalizeDescription(value: unknown): string | null {
+  if (value === undefined || value === null) return null;
+
+  if (typeof value !== "string") {
+    throw new ValidationError("description must be a string");
+  }
+
+  const description = value.trim();
+  return description || null;
+}
