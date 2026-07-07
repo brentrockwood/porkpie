@@ -49,10 +49,16 @@ Open <http://localhost:5173>.
 You can also run the local stack with:
 
 ```sh
-docker compose up
+docker compose up --build
 ```
 
 The API will be available at <http://localhost:4000> and the client at <http://localhost:5173>.
+
+The compose stack uses a small local Node development image with current npm and a Chainguard Postgres image to keep fixable high/critical container vulnerabilities out of the demo runtime. If switching from the earlier Postgres 16 image, reset the local database volume once:
+
+```sh
+docker compose down -v
+```
 
 ## Tests
 
@@ -73,8 +79,14 @@ Browser smoke tests use `agent-browser` against the running app:
 
 ```sh
 npm install -g agent-browser
-docker compose up -d
+docker compose up -d --build
 npm run test:e2e
+```
+
+Container vulnerability scan for fixable high/critical findings:
+
+```sh
+npm run scan:containers
 ```
 
 ## Useful commands

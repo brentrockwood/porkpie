@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: cgr.dev/chainguard/postgres:latest
     environment:
       POSTGRES_DB: porkpie
       POSTGRES_USER: porkpie
@@ -16,7 +16,10 @@ services:
       retries: 10
 
   server:
-    image: node:22-alpine
+    build:
+      context: .
+      dockerfile: docker/node-dev.Dockerfile
+    image: porkpie-node-dev:24-alpine
     working_dir: /app
     command: sh -c "npm ci && npm run migrate -w @porkpie/server && npm run dev -w @porkpie/server"
     environment:
@@ -33,7 +36,10 @@ services:
         condition: service_healthy
 
   client:
-    image: node:22-alpine
+    build:
+      context: .
+      dockerfile: docker/node-dev.Dockerfile
+    image: porkpie-node-dev:24-alpine
     working_dir: /app
     command: sh -c "npm ci && npm run dev -w @porkpie/client"
     environment:

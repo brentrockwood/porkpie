@@ -13,6 +13,7 @@
     "test": "npm run test --workspaces --if-present",
     "test:system": "npm run test:system -w @porkpie/server",
     "test:e2e": "./scripts/browser-smoke.sh",
+    "scan:containers": "./scripts/scan-containers.sh",
     "typecheck": "npm run typecheck --workspaces --if-present"
   }
 }
