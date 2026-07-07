@@ -14,6 +14,13 @@
     "test:system": "npm run test:system -w @porkpie/server",
     "test:e2e": "./scripts/browser-smoke.sh",
     "scan:containers": "./scripts/scan-containers.sh",
+    "lint": "eslint client/src server/src server/tests shared/src",
     "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.6.0",
+    "globals": "17.7.0",
+    "typescript-eslint": "8.63.0"
   }
 }

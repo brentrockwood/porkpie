@@ -56,4 +56,16 @@ describe("task API", () => {
     const response = await request(app).post("/api/tasks").send({ title: "   " }).expect(400);
     expect(response.body.error).toBe("title is required");
   });
+
+  it("returns 400 for malformed JSON", async () => {
+    const app = testApp();
+
+    const response = await request(app)
+      .post("/api/tasks")
+      .set("Content-Type", "application/json")
+      .send('{"title":')
+      .expect(400);
+
+    expect(response.body.error).toBe("Malformed JSON request body");
+  });
 });

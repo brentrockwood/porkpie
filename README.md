@@ -10,11 +10,16 @@ Porkpie is a small full-stack task app for a live technical craft interview walk
 
 ## Local development
 
-Install dependencies:
+Install dependencies and create local env files:
 
 ```sh
 npm install
+cp .env.example .env
+cp server/.env.example server/.env
+cp client/.env.example client/.env
 ```
+
+Edit `.env` and `server/.env` with local database credentials. Do not commit those files.
 
 Start Postgres:
 
@@ -25,7 +30,6 @@ docker compose up postgres
 Run migrations:
 
 ```sh
-cp server/.env.example server/.env
 npm run migrate -w @porkpie/server
 ```
 
@@ -74,7 +78,7 @@ Database-backed system tests run against PostgreSQL:
 
 ```sh
 docker compose up -d postgres
-SYSTEM_DATABASE_URL=postgres://porkpie:porkpie@localhost:5432/porkpie npm run test:system
+SYSTEM_DATABASE_URL="$DATABASE_URL" npm run test:system
 ```
 
 Browser smoke tests use `agent-browser` against the running app:
@@ -94,6 +98,7 @@ npm run scan:containers
 ## Useful commands
 
 ```sh
+npm run lint
 npm run typecheck
 npm run build
 npm run migrate -w @porkpie/server

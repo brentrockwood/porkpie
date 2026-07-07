@@ -29,6 +29,11 @@ export function createApp(taskService: TaskService, clientOrigin = "http://local
   app.use("/api/tasks", createTaskRouter(taskService));
 
   app.use((error: unknown, _request: express.Request, response: express.Response, _next: express.NextFunction) => {
+    if (isJsonParseError(error)) {
+      response.status(400).json({ error: "Malformed JSON request body" });
+      return;
+    }
+
     if (error instanceof ValidationError) {
       response.status(400).json({ error: error.message });
       return;
@@ -39,4 +44,8 @@ export function createApp(taskService: TaskService, clientOrigin = "http://local
   });
 
   return app;
+}
+
+function isJsonParseError(error: unknown): boolean {
+  return error instanceof SyntaxError && typeof error === "object" && error !== null && "status" in error && error.status === 400;
 }

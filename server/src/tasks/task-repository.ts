@@ -60,27 +60,25 @@ export class PostgresTaskRepository implements TaskRepository {
   }
 
   async update(userId: string, id: string, patch: TaskPatch): Promise<Task | null> {
-    const existing = await this.findById(userId, id);
-    if (!existing) return null;
-
     const result = await this.pool.query(
       `UPDATE tasks
-       SET title = $3,
-           description = $4,
-           completed = $5,
+       SET title = COALESCE($3, title),
+           description = CASE WHEN $4 THEN $5 ELSE description END,
+           completed = COALESCE($6, completed),
            updated_at = now()
        WHERE user_id = $1 AND id = $2
        RETURNING *`,
       [
         userId,
         id,
-        patch.title ?? existing.title,
-        patch.description === undefined ? existing.description : patch.description,
-        patch.completed ?? existing.completed,
+        patch.title ?? null,
+        patch.description !== undefined,
+        patch.description ?? null,
+        patch.completed ?? null,
       ],
     );
 
-    return rowToTask(result.rows[0]);
+    return result.rows[0] ? rowToTask(result.rows[0]) : null;
   }
 
   async delete(userId: string, id: string): Promise<boolean> {

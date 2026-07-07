@@ -31,19 +31,37 @@ export function App() {
   }
 
   async function handleToggle(task: Task) {
-    const updated = await updateTask(task.id, { completed: !task.completed });
-    setTasks((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+    setError(null);
+
+    try {
+      const updated = await updateTask(task.id, { completed: !task.completed });
+      setTasks((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update task");
+    }
   }
 
   async function handleSave(task: Task) {
-    const updated = await updateTask(task.id, { title: editingTitle, description: editingDescription });
-    setTasks((current) => current.map((item) => (item.id === updated.id ? updated : item)));
-    setEditingId(null);
+    setError(null);
+
+    try {
+      const updated = await updateTask(task.id, { title: editingTitle, description: editingDescription });
+      setTasks((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+      setEditingId(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save task");
+    }
   }
 
   async function handleDelete(task: Task) {
-    await deleteTask(task.id);
-    setTasks((current) => current.filter((item) => item.id !== task.id));
+    setError(null);
+
+    try {
+      await deleteTask(task.id);
+      setTasks((current) => current.filter((item) => item.id !== task.id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete task");
+    }
   }
 
   return (

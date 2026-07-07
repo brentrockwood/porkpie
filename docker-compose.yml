@@ -2,15 +2,15 @@ services:
   postgres:
     image: cgr.dev/chainguard/postgres:latest
     environment:
-      POSTGRES_DB: porkpie
-      POSTGRES_USER: porkpie
-      POSTGRES_PASSWORD: porkpie
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     ports:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U porkpie -d porkpie"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -24,7 +24,7 @@ services:
     command: sh -c "npm ci && npm run migrate -w @porkpie/server && npm run dev -w @porkpie/server"
     environment:
       PORT: 4000
-      DATABASE_URL: postgres://porkpie:porkpie@postgres:5432/porkpie
+      DATABASE_URL: postgres://${POSTGRES_USER:?Set POSTGRES_USER in .env}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:?Set POSTGRES_DB in .env}
       CLIENT_ORIGIN: http://localhost:5173
     ports:
       - "4000:4000"

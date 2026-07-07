@@ -74,12 +74,39 @@ describeSystem("task API system test", () => {
     expect(rowAfterDelete.rowCount).toBe(0);
   });
 
+  it("updates only provided fields and can clear description", async () => {
+    const app = createApp(new TaskService(new PostgresTaskRepository(pool)));
+
+    const created = await request(app)
+      .post("/api/tasks")
+      .send({ title: "Preserve description", description: "Keep this" })
+      .expect(201);
+
+    const id = created.body.task.id;
+
+    const completedOnly = await request(app).patch(`/api/tasks/${id}`).send({ completed: true }).expect(200);
+    expect(completedOnly.body.task).toMatchObject({
+      title: "Preserve description",
+      description: "Keep this",
+      completed: true,
+    });
+
+    const cleared = await request(app).patch(`/api/tasks/${id}`).send({ description: null }).expect(200);
+    expect(cleared.body.task).toMatchObject({
+      title: "Preserve description",
+      description: null,
+      completed: true,
+    });
+  });
+
   it("returns validation errors before writing invalid tasks", async () => {
     const app = createApp(new TaskService(new PostgresTaskRepository(pool)));
 
+    const before = await pool.query("SELECT count(*)::int AS count FROM tasks");
+
     await request(app).post("/api/tasks").send({ title: "" }).expect(400);
 
-    const count = await pool.query("SELECT count(*)::int AS count FROM tasks");
-    expect(count.rows[0].count).toBe(0);
+    const after = await pool.query("SELECT count(*)::int AS count FROM tasks");
+    expect(after.rows[0].count).toBe(before.rows[0].count);
   });
 });

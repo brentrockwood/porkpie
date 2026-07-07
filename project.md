@@ -97,7 +97,7 @@ Initial task model:
 type Task = {
   id: string;
   title: string;
-  description?: string;
+  description: string | null;
   completed: boolean;
   createdAt: string;
   updatedAt: string;
@@ -195,7 +195,7 @@ Classifier interface shape:
 interface TaskClassifier {
   classify(input: {
     title: string;
-    description?: string;
+    description: string | null;
   }): Promise<Array<{
     tag: string;
     confidence: number;
