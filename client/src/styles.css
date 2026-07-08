@@ -110,9 +110,21 @@ textarea {
   border-radius: 1rem;
   display: grid;
   gap: 1rem;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   margin-bottom: 1rem;
   padding: 1rem;
+}
+
+.filter-summary {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.filter-panel {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .error {
