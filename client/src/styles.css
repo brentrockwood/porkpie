@@ -57,28 +57,25 @@
 
 .task-card {
   align-items: start;
+  cursor: pointer;
   display: grid;
   gap: 1rem;
   grid-template-columns: auto 1fr auto;
   padding: 1rem;
-  transition: border-color 120ms ease, box-shadow 120ms ease;
+  transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
 }
 
 .task-card:hover {
+  background: #fbfdff;
   box-shadow: 0 10px 30px rgb(15 23 42 / 0.1);
 }
 
 .task-open-button {
   border-radius: 0.75rem;
   display: block;
-  justify-content: flex-start;
   padding: 0.4rem;
   text-align: left;
   width: 100%;
-}
-
-.task-open-button:hover {
-  background: #f8fafc;
 }
 
 .task-open-button .task-content {
@@ -114,11 +111,6 @@
 @media (max-width: 600px) {
   .app-shell {
     padding-top: 1.5rem;
-  }
-
-  .filter-summary {
-    align-items: stretch;
-    flex-direction: column;
   }
 
   .task-card {

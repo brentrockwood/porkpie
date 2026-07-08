@@ -53,11 +53,11 @@ export function TaskFiltersForm({
             value={searchFilter}
           />
           <Autocomplete
-            freeSolo
-            inputValue={tagFilter}
-            onInputChange={(_event, value) => onTagFilterChange(value)}
+            isOptionEqualToValue={(option, value) => option === value}
+            onChange={(_event, value) => onTagFilterChange(value ?? "")}
             options={availableTags}
-            renderInput={(params) => <TextField {...params} fullWidth label="Tag" placeholder="Filter by tag" />}
+            renderInput={(params) => <TextField {...params} fullWidth label="Tag" placeholder="Choose a tag" />}
+            value={tagFilter || null}
           />
         </Stack>
       </Collapse>

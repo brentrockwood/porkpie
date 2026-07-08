@@ -255,6 +255,7 @@ export function App() {
         title={title}
         description={description}
         tagInput={tagInput}
+        availableTags={availableTags}
         onTitleChange={setTitle}
         onDescriptionChange={setDescription}
         onTagInputChange={setTagInput}
@@ -292,6 +293,7 @@ export function App() {
         editingTitle={editingTitle}
         editingDescription={editingDescription}
         editingTags={editingTags}
+        availableTags={availableTags}
         onToggle={(task) => void handleToggle(task)}
         onStartEditing={startEditing}
         onSave={(task) => void handleSave(task)}

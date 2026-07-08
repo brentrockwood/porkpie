@@ -1,10 +1,12 @@
 import type { FormEvent } from "react";
 import { Button, Paper, Stack, TextField } from "@mui/material";
+import { TagAutocomplete } from "./TagAutocomplete";
 
 type TaskFormProps = {
   title: string;
   description: string;
   tagInput: string;
+  availableTags: string[];
   onTitleChange: (value: string) => void;
   onDescriptionChange: (value: string) => void;
   onTagInputChange: (value: string) => void;
@@ -15,6 +17,7 @@ export function TaskForm({
   title,
   description,
   tagInput,
+  availableTags,
   onTitleChange,
   onDescriptionChange,
   onTagInputChange,
@@ -40,10 +43,10 @@ export function TaskForm({
           placeholder="Optional details"
           value={description}
         />
-        <TextField
-          fullWidth
+        <TagAutocomplete
+          availableTags={availableTags}
           label="Tags"
-          onChange={(event) => onTagInputChange(event.target.value)}
+          onChange={onTagInputChange}
           placeholder="shopping, grocery"
           value={tagInput}
         />

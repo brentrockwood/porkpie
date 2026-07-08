@@ -46,6 +46,7 @@ fi
 agent-browser fill "input[placeholder='Buy milk']" "$TITLE" >/dev/null
 agent-browser fill "form textarea[placeholder='Optional details']" "$DESCRIPTION" >/dev/null
 agent-browser fill "form input[placeholder='shopping, grocery']" "$TAG" >/dev/null
+agent-browser press Enter >/dev/null
 agent-browser click "button[type=submit]" >/dev/null
 
 for _ in {1..20}; do
@@ -102,6 +103,7 @@ agent-browser click ".task-card:first-of-type .task-open-button" >/dev/null
 agent-browser fill ".task-card:first-of-type .edit-fields input:first-of-type" "$BUTTON_UPDATED_TITLE" >/dev/null
 agent-browser fill ".task-card:first-of-type .edit-fields textarea" "$BUTTON_UPDATED_DESCRIPTION" >/dev/null
 agent-browser fill ".task-card:first-of-type .edit-fields input[placeholder='Tags']" "$BUTTON_UPDATED_TAG" >/dev/null
+agent-browser press Tab >/dev/null
 agent-browser click ".task-card:first-of-type .task-actions button" >/dev/null
 
 for _ in {1..20}; do
@@ -138,7 +140,7 @@ for _ in {1..20}; do
     agent-browser fill "input[placeholder='Search tasks']" "$UPDATED_TITLE" >/dev/null
     agent-browser click ".switch-field input" >/dev/null
     sleep 1
-    if agent-browser eval "document.querySelector('input[placeholder=\\'Filter by tag\\']')?.value" | grep -F "$UPDATED_TAG" >/dev/null && \
+    if agent-browser eval "document.querySelector('input[placeholder=\\'Choose a tag\\']')?.value" | grep -F "$UPDATED_TAG" >/dev/null && \
       agent-browser eval "new URLSearchParams(location.search).get('tag')" | grep -F "$UPDATED_TAG" >/dev/null && \
       agent-browser eval "new URLSearchParams(location.search).get('search')" | grep -F "$UPDATED_TITLE" >/dev/null && \
       agent-browser eval "new URLSearchParams(location.search).get('showCompleted')" | grep -F "true" >/dev/null; then
