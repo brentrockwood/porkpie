@@ -1,5 +1,7 @@
 # Project Instructions
 
+All new work should happen on a branch and be proposed through a pull request. Do not commit directly to `main` unless the user explicitly asks for it.
+
 Before committing changes in this repository:
 
 1. Determine whether any new tests should be created. If so, create them.
