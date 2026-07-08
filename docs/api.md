@@ -64,6 +64,8 @@ Body:
 }
 ```
 
+Created tasks may also include deterministic classifier tags with `source: "ai"` and a numeric `confidence`. User-supplied tags are always stored as `source: "manual"`; the classifier does not duplicate a manual tag with the same name.
+
 ### Get task
 
 ```text

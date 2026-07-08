@@ -201,8 +201,8 @@ export const openApiDocument = {
         required: ["name", "source", "confidence"],
         properties: {
           name: { type: "string" },
-          source: { type: "string", enum: ["manual", "ai"] },
-          confidence: { type: ["number", "null"], minimum: 0, maximum: 1 },
+          source: { type: "string", enum: ["manual", "ai"], description: "manual for user-entered tags, ai for deterministic classifier tags." },
+          confidence: { type: ["number", "null"], minimum: 0, maximum: 1, description: "Classifier confidence for ai tags; null for manual tags." },
         },
       },
       Task: {
@@ -224,7 +224,7 @@ export const openApiDocument = {
         properties: {
           title: { type: "string", minLength: 1 },
           description: { type: ["string", "null"] },
-          tags: { type: "array", items: { type: "string" } },
+          tags: { type: "array", items: { type: "string" }, description: "Manual tags. The server may add non-duplicative classifier tags with source=ai." },
         },
       },
       UpdateTaskRequest: {

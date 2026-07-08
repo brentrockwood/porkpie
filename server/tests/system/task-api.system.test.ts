@@ -112,6 +112,26 @@ describeSystem("task API system test", () => {
     ]);
   });
 
+  it("persists deterministic AI tags separately from manual tags", async () => {
+    const app = createApp(new TaskService(new PostgresTaskRepository(pool)));
+
+    const created = await request(app)
+      .post("/api/tasks")
+      .send({ title: "Prepare interview presentation", description: "Review architecture notes" })
+      .expect(201);
+
+    expect(created.body.task.tags).toEqual([{ name: "work", source: "ai", confidence: 0.85 }]);
+
+    const rows = await pool.query(
+      `SELECT tags.name, task_tags.source, task_tags.confidence::float AS confidence
+       FROM task_tags
+       JOIN tags ON tags.id = task_tags.tag_id
+       WHERE task_tags.task_id = $1`,
+      [created.body.task.id],
+    );
+    expect(rows.rows).toEqual([{ name: "work", source: "ai", confidence: 0.85 }]);
+  });
+
   it("paginates task lists with metadata", async () => {
     const app = createApp(new TaskService(new PostgresTaskRepository(pool)));
 
