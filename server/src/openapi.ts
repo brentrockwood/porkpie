@@ -152,7 +152,7 @@ export const openApiDocument = {
         name: "pageSize",
         in: "query",
         required: false,
-        schema: { type: "integer", minimum: 1, default: 20 },
+        schema: { type: "integer", minimum: 1, maximum: 100, default: 20 },
       },
     },
     responses: {
@@ -238,7 +238,7 @@ export const openApiDocument = {
           },
           total: { type: "integer", minimum: 0 },
           page: { type: "integer", minimum: 1 },
-          pageSize: { type: "integer", minimum: 1 },
+          pageSize: { type: "integer", minimum: 1, maximum: 100 },
           totalPages: { type: "integer", minimum: 1 },
         },
       },

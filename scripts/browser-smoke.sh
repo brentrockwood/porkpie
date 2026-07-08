@@ -15,8 +15,8 @@ if ! command -v agent-browser >/dev/null 2>&1; then
   exit 1
 fi
 
-curl -fsS "$API_URL/health" >/dev/null
-curl -fsS "$APP_URL" >/dev/null
+curl -fsS --max-time 10 "$API_URL/health" >/dev/null
+curl -fsS --max-time 10 "$APP_URL" >/dev/null
 
 agent-browser close --all >/dev/null 2>&1 || true
 
