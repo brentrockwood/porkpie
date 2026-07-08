@@ -93,6 +93,10 @@ function normalizeTags(value: unknown): string[] {
     throw new ValidationError("tags must be an array");
   }
 
+  if (value.length > 20) {
+    throw new ValidationError("tags must contain at most 20 items");
+  }
+
   const tags = value.map((tag) => {
     if (typeof tag !== "string") {
       throw new ValidationError("tags must contain strings");

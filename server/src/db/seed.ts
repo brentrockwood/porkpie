@@ -1,3 +1,5 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { demoAuthContext } from "../auth/auth-context.js";
 import { loadConfig } from "../config/env.js";
 import { createPool } from "./pool.js";
@@ -7,7 +9,7 @@ import { PostgresTaskRepository } from "../tasks/task-repository.js";
 import { TaskService } from "../tasks/task-service.js";
 
 export async function seedDemoData(databaseUrl: string): Promise<void> {
-  assertSeedAllowed();
+  assertSeedAllowed(databaseUrl);
   await runMigrations(databaseUrl);
 
   const pool = createPool(databaseUrl);
@@ -29,13 +31,17 @@ export async function seedDemoData(databaseUrl: string): Promise<void> {
   }
 }
 
-function assertSeedAllowed(): void {
+function assertSeedAllowed(databaseUrl: string): void {
   if (process.env.NODE_ENV === "production") {
     throw new Error("Refusing to run demo seed against a production environment");
   }
+
+  if (/\b(prod|production)\b/i.test(databaseUrl)) {
+    throw new Error("Refusing to run demo seed: databaseUrl looks like a production connection string");
+  }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
   const config = loadConfig();
   seedDemoData(config.databaseUrl).catch((error) => {
     console.error(error);

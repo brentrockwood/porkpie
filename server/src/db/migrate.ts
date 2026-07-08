@@ -51,7 +51,7 @@ async function applyMigration(client: PoolClient, file: string): Promise<void> {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
   const config = loadConfig();
   runMigrations(config.databaseUrl).catch((error) => {
     console.error(error);

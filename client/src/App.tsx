@@ -77,8 +77,9 @@ export function App() {
   }, [debouncedSearchFilter, searchFilter]);
 
   useEffect(() => {
+    if (pendingEditingId) return;
     syncUrl({ search: debouncedSearchFilter, tag: tagFilter, showCompleted, page, editingId }, lastUrl);
-  }, [debouncedSearchFilter, editingId, page, showCompleted, tagFilter]);
+  }, [debouncedSearchFilter, editingId, page, pendingEditingId, showCompleted, tagFilter]);
 
   useEffect(() => {
     const controller = new AbortController();

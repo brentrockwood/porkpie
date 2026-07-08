@@ -113,6 +113,17 @@ describe("task API", () => {
     expect(response.body).toEqual({ error: "pageSize must be at most 100" });
   });
 
+  it("rejects too many tags", async () => {
+    const app = testApp();
+
+    const response = await request(app)
+      .post("/api/tasks")
+      .send({ title: "Too many tags", tags: Array.from({ length: 21 }, (_, index) => `tag-${index}`) })
+      .expect(400);
+
+    expect(response.body.error).toBe("tags must contain at most 20 items");
+  });
+
   it("rejects blank task titles", async () => {
     const app = testApp();
 
