@@ -1,9 +1,22 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
 import { App } from "./App";
+
+const theme = createTheme({
+  palette: {
+    primary: { main: "#7c3aed" },
+  },
+  shape: {
+    borderRadius: 12,
+  },
+});
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <App />
+    </ThemeProvider>
   </StrictMode>,
 );

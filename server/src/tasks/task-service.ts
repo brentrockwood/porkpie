@@ -12,6 +12,10 @@ export class TaskService {
     return this.repository.list(auth.userId, filters);
   }
 
+  listTags(auth: AuthContext): Promise<string[]> {
+    return this.repository.listTags(auth.userId);
+  }
+
   getTask(auth: AuthContext, id: string): Promise<Task | null> {
     return this.repository.findById(auth.userId, id);
   }
@@ -87,6 +91,10 @@ function normalizeTags(value: unknown): string[] {
 
   if (!Array.isArray(value)) {
     throw new ValidationError("tags must be an array");
+  }
+
+  if (value.length > 20) {
+    throw new ValidationError("tags must contain at most 20 items");
   }
 
   const tags = value.map((tag) => {

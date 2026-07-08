@@ -46,6 +46,7 @@ fi
 agent-browser fill "input[placeholder='Buy milk']" "$TITLE" >/dev/null
 agent-browser fill "form textarea[placeholder='Optional details']" "$DESCRIPTION" >/dev/null
 agent-browser fill "form input[placeholder='shopping, grocery']" "$TAG" >/dev/null
+agent-browser press Enter >/dev/null
 agent-browser click "button[type=submit]" >/dev/null
 
 for _ in {1..20}; do
@@ -63,7 +64,7 @@ if ! grep -F "$TITLE" <<<"$page_text" >/dev/null || ! grep -F "$TAG" <<<"$page_t
   exit 1
 fi
 
-agent-browser click ".task-card:first-of-type .task-actions button" >/dev/null
+agent-browser click ".task-card:first-of-type .task-open-button" >/dev/null
 if agent-browser eval "location.pathname !== '/'" | grep -F "true" >/dev/null; then
   :
 else
@@ -87,7 +88,7 @@ if grep -F "Cancel button should not persist" <<<"$page_text" >/dev/null || ! gr
   exit 1
 fi
 
-agent-browser click ".task-card:first-of-type .task-actions button" >/dev/null
+agent-browser click ".task-card:first-of-type .task-open-button" >/dev/null
 agent-browser fill ".task-card:first-of-type .edit-fields input:first-of-type" "Escape should not persist" >/dev/null
 agent-browser press Escape >/dev/null
 
@@ -98,10 +99,11 @@ if grep -F "Escape should not persist" <<<"$page_text" >/dev/null || ! grep -F "
   exit 1
 fi
 
-agent-browser click ".task-card:first-of-type .task-actions button" >/dev/null
+agent-browser click ".task-card:first-of-type .task-open-button" >/dev/null
 agent-browser fill ".task-card:first-of-type .edit-fields input:first-of-type" "$BUTTON_UPDATED_TITLE" >/dev/null
 agent-browser fill ".task-card:first-of-type .edit-fields textarea" "$BUTTON_UPDATED_DESCRIPTION" >/dev/null
 agent-browser fill ".task-card:first-of-type .edit-fields input[placeholder='Tags']" "$BUTTON_UPDATED_TAG" >/dev/null
+agent-browser press Tab >/dev/null
 agent-browser click ".task-card:first-of-type .task-actions button" >/dev/null
 
 for _ in {1..20}; do
@@ -123,10 +125,11 @@ if ! grep -F "$BUTTON_UPDATED_TITLE" <<<"$page_text" >/dev/null || \
   exit 1
 fi
 
-agent-browser click ".task-card:first-of-type .task-actions button" >/dev/null
+agent-browser click ".task-card:first-of-type .task-open-button" >/dev/null
 agent-browser fill ".task-card:first-of-type .edit-fields input:first-of-type" "$UPDATED_TITLE" >/dev/null
 agent-browser fill ".task-card:first-of-type .edit-fields textarea" "$UPDATED_DESCRIPTION" >/dev/null
 agent-browser fill ".task-card:first-of-type .edit-fields input[placeholder='Tags']" "$UPDATED_TAG" >/dev/null
+agent-browser press Tab >/dev/null
 agent-browser press Enter >/dev/null
 
 for _ in {1..20}; do
@@ -134,16 +137,32 @@ for _ in {1..20}; do
   if grep -F "$UPDATED_TITLE" <<<"$page_text" >/dev/null && \
     grep -F "$UPDATED_DESCRIPTION" <<<"$page_text" >/dev/null && \
     grep -F "$UPDATED_TAG" <<<"$page_text" >/dev/null; then
-    agent-browser click ".task-card:first-of-type .tags button" >/dev/null
+    agent-browser eval --stdin >/dev/null <<JS
+[...document.querySelectorAll('.task-card:first-of-type .tags button')].find((button) => button.textContent?.trim() === '$UPDATED_TAG')?.click();
+JS
+    if ! agent-browser eval "Boolean(document.querySelector('input[placeholder=\\'Search tasks\\']'))" | grep -F "true" >/dev/null; then
+      agent-browser click ".filter-summary button" >/dev/null
+    fi
     agent-browser fill "input[placeholder='Search tasks']" "$UPDATED_TITLE" >/dev/null
-    agent-browser select "select" "incomplete" >/dev/null
+    agent-browser click ".switch-field input" >/dev/null
     sleep 1
-    if agent-browser eval "document.querySelector('input[placeholder=\\'Filter by tag\\']')?.value" | grep -F "$UPDATED_TAG" >/dev/null && \
+    if agent-browser eval "document.querySelector('input[placeholder=\\'Choose a tag\\']')?.value" | grep -F "$UPDATED_TAG" >/dev/null && \
       agent-browser eval "new URLSearchParams(location.search).get('tag')" | grep -F "$UPDATED_TAG" >/dev/null && \
       agent-browser eval "new URLSearchParams(location.search).get('search')" | grep -F "$UPDATED_TITLE" >/dev/null && \
-      agent-browser eval "new URLSearchParams(location.search).get('status')" | grep -F "incomplete" >/dev/null; then
-      echo "Browser smoke passed: $UPDATED_TITLE"
-      exit 0
+      agent-browser eval "new URLSearchParams(location.search).get('showCompleted')" | grep -F "true" >/dev/null; then
+      agent-browser click ".tag-filter-chip" >/dev/null
+      if ! agent-browser eval "new URLSearchParams(location.search).has('tag')" | grep -F "false" >/dev/null; then
+        continue
+      fi
+      agent-browser eval --stdin >/dev/null <<JS
+[...document.querySelectorAll('.task-card:first-of-type .tags button')].find((button) => button.textContent?.trim() === '$UPDATED_TAG')?.click();
+JS
+      agent-browser click "button[aria-label='Clear search and tag filters']" >/dev/null
+      sleep 1
+      if agent-browser eval "!new URLSearchParams(location.search).has('tag') && !new URLSearchParams(location.search).has('search')" | grep -F "true" >/dev/null; then
+        echo "Browser smoke passed: $UPDATED_TITLE"
+        exit 0
+      fi
     fi
   fi
   sleep 1

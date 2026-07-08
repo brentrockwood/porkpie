@@ -35,6 +35,7 @@ export type TaskPatch = {
 
 export interface TaskRepository {
   list(userId: string, filters: TaskFilters): Promise<PagedTasks>;
+  listTags(userId: string): Promise<string[]>;
   findById(userId: string, id: string): Promise<Task | null>;
   create(task: NewTask): Promise<Task>;
   update(userId: string, id: string, patch: TaskPatch): Promise<Task | null>;
@@ -115,6 +116,19 @@ export class PostgresTaskRepository implements TaskRepository {
       pageSize: filters.pageSize,
       totalPages: Math.max(1, Math.ceil(total / filters.pageSize)),
     };
+  }
+
+  async listTags(userId: string): Promise<string[]> {
+    const result = await this.pool.query(
+      `SELECT DISTINCT tags.name
+       FROM tags
+       JOIN task_tags ON task_tags.tag_id = tags.id
+       JOIN tasks ON tasks.id = task_tags.task_id
+       WHERE tasks.user_id = $1
+       ORDER BY tags.name`,
+      [userId],
+    );
+    return result.rows.map((row) => String(row.name));
   }
 
   async findById(userId: string, id: string): Promise<Task | null> {
@@ -227,22 +241,21 @@ async function loadTagsForTasks(db: Queryable, taskIds: string[]): Promise<Map<s
 
 async function replaceManualTags(db: Queryable, taskId: string, names: string[]): Promise<void> {
   await db.query("DELETE FROM task_tags WHERE task_id = $1 AND source = 'manual'", [taskId]);
+  if (names.length === 0) return;
 
-  for (const name of names) {
-    const tagId = randomUUID();
-    const tag = await db.query(
-      `INSERT INTO tags (id, name)
-       VALUES ($1, $2)
-       ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
-       RETURNING id`,
-      [tagId, name],
-    );
+  const ids = names.map(() => randomUUID());
+  const tagResult = await db.query(
+    `INSERT INTO tags (id, name)
+     SELECT unnest($1::uuid[]), unnest($2::text[])
+     ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+     RETURNING id`,
+    [ids, names],
+  );
 
-    await db.query(
-      `INSERT INTO task_tags (task_id, tag_id, source, confidence)
-       VALUES ($1, $2, 'manual', NULL)
-       ON CONFLICT DO NOTHING`,
-      [taskId, tag.rows[0].id],
-    );
-  }
+  await db.query(
+    `INSERT INTO task_tags (task_id, tag_id, source, confidence)
+     SELECT $1, unnest($2::uuid[]), 'manual', NULL
+     ON CONFLICT DO NOTHING`,
+    [taskId, tagResult.rows.map((row) => row.id)],
+  );
 }

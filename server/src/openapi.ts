@@ -66,6 +66,21 @@ export const openApiDocument = {
         },
       },
     },
+    "/api/tasks/tags": {
+      get: {
+        summary: "List task tags",
+        responses: {
+          "200": {
+            description: "Known task tags for the current user",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/TagListResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
     "/api/tasks/{id}": {
       get: {
         summary: "Get a task",
@@ -226,6 +241,16 @@ export const openApiDocument = {
         required: ["task"],
         properties: {
           task: { $ref: "#/components/schemas/Task" },
+        },
+      },
+      TagListResponse: {
+        type: "object",
+        required: ["tags"],
+        properties: {
+          tags: {
+            type: "array",
+            items: { type: "string" },
+          },
         },
       },
       TaskListResponse: {

@@ -1,6 +1,13 @@
-import type { KeyboardEvent } from "react";
+import type { KeyboardEvent, MouseEvent } from "react";
 import type { Task } from "@porkpie/shared";
 import type { TaskFilters } from "../api";
+import { Box, Checkbox, Chip, IconButton, Paper, Stack, TextField, Typography } from "@mui/material";
+import CancelIcon from "@mui/icons-material/Close";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import DeleteIcon from "@mui/icons-material/Delete";
+import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
+import SaveIcon from "@mui/icons-material/Check";
+import { TagAutocomplete } from "./TagAutocomplete";
 
 type TaskListProps = {
   tasks: Task[];
@@ -10,9 +17,10 @@ type TaskListProps = {
   editingTitle: string;
   editingDescription: string;
   editingTags: string;
+  availableTags: string[];
   onToggle: (task: Task) => void;
   onStartEditing: (task: Task) => void;
-  onSave: (task: Task) => void;
+  onSave: (task: Task, tagsOverride?: string) => void;
   onCancelEditing: () => void;
   onDelete: (task: Task) => void;
   onEditingTitleChange: (value: string) => void;
@@ -29,6 +37,7 @@ export function TaskList({
   editingTitle,
   editingDescription,
   editingTags,
+  availableTags,
   onToggle,
   onStartEditing,
   onSave,
@@ -52,86 +61,123 @@ export function TaskList({
     }
   }
 
+  function stopCardEdit(event: MouseEvent) {
+    event.stopPropagation();
+  }
+
   return (
-    <section className="task-list" aria-label="Tasks">
+    <Stack className="task-list" component="section" aria-label="Tasks" spacing={1.5}>
       {tasks.length === 0 ? (
-        <p className="empty">
+        <Typography className="empty" color="text.secondary">
           {hasActiveFilters || completionFilter !== "all" ? "No tasks match the current filters." : "No tasks yet."}
-        </p>
+        </Typography>
       ) : null}
       {tasks.map((task) => (
-        <article className="task-card" key={task.id}>
-          <input
+        <Paper
+          className="task-card"
+          component="article"
+          elevation={2}
+          key={task.id}
+          onClick={editingId === task.id ? undefined : () => onStartEditing(task)}
+          role={editingId === task.id ? undefined : "button"}
+          tabIndex={editingId === task.id ? undefined : 0}
+          onKeyDown={
+            editingId === task.id
+              ? undefined
+              : (event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onStartEditing(task);
+                  }
+                }
+          }
+        >
+          <Checkbox
             aria-label={`Mark ${task.title} ${task.completed ? "incomplete" : "complete"}`}
             checked={task.completed}
+            checkedIcon={<CheckCircleIcon />}
+            icon={<RadioButtonUncheckedIcon />}
+            onClick={stopCardEdit}
+            onKeyDown={(event) => event.stopPropagation()}
             onChange={() => onToggle(task)}
-            type="checkbox"
           />
           {editingId === task.id ? (
-            <form
+            <Box
               className="task-edit-form"
-              onKeyDown={(event) => handleEditKeyDown(event, task)}
+              component="form"
+              onClick={stopCardEdit}
+              onKeyDown={(event: KeyboardEvent<HTMLFormElement>) => handleEditKeyDown(event, task)}
               onSubmit={(event) => {
                 event.preventDefault();
                 onSave(task);
               }}
             >
-              <div className="task-content">
-                <div className="edit-fields">
-                  <input aria-label="Task title" value={editingTitle} onChange={(event) => onEditingTitleChange(event.target.value)} />
-                  <textarea
-                    aria-label="Task description"
+              <Box className="task-content">
+                <Stack className="edit-fields" spacing={1}>
+                  <TextField fullWidth label="Title" value={editingTitle} onChange={(event) => onEditingTitleChange(event.target.value)} />
+                  <TextField
+                    fullWidth
+                    label="Description"
+                    multiline
+                    minRows={2}
                     value={editingDescription}
                     onChange={(event) => onEditingDescriptionChange(event.target.value)}
                     placeholder="Optional details"
                   />
-                  <input
-                    aria-label="Task tags"
-                    value={editingTags}
-                    onChange={(event) => onEditingTagsChange(event.target.value)}
+                  <TagAutocomplete
+                    availableTags={availableTags}
+                    label="Tags"
+                    onChange={onEditingTagsChange}
+                    onEnter={(nextTags) => onSave(task, nextTags)}
                     placeholder="Tags"
+                    value={editingTags}
                   />
-                </div>
-              </div>
-              <div className="task-actions">
-                <button type="submit">Save</button>
-                <button type="button" onClick={onCancelEditing}>
-                  Cancel
-                </button>
-                <button type="button" onClick={() => onDelete(task)}>
-                  Delete
-                </button>
-              </div>
-            </form>
+                </Stack>
+              </Box>
+              <Stack className="task-actions" direction="row" spacing={0.5}>
+                <IconButton aria-label="Save task" color="primary" type="submit">
+                  <SaveIcon />
+                </IconButton>
+                <IconButton aria-label="Cancel editing" type="button" onClick={onCancelEditing}>
+                  <CancelIcon />
+                </IconButton>
+                <IconButton aria-label="Delete task" color="error" type="button" onClick={() => onDelete(task)}>
+                  <DeleteIcon />
+                </IconButton>
+              </Stack>
+            </Box>
           ) : (
             <>
-              <div className="task-content">
-                <h2 className={task.completed ? "completed" : ""}>{task.title}</h2>
-                {task.description ? <p>{task.description}</p> : null}
-                {task.tags.length > 0 ? (
-                  <ul className="tags" aria-label={`Tags for ${task.title}`}>
-                    {task.tags.map((tag) => (
-                      <li key={`${tag.source}:${tag.name}`}>
-                        <button type="button" onClick={() => onTagClick(tag.name)}>
-                          {tag.name}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-              </div>
-              <div className="task-actions">
-                <button type="button" onClick={() => onStartEditing(task)}>
-                  Edit
-                </button>
-                <button type="button" onClick={() => onDelete(task)}>
-                  Delete
-                </button>
-              </div>
+              <Box className="task-open-button">
+                <Box className="task-content">
+                  <Typography className={task.completed ? "completed" : ""} component="h2" variant="subtitle1">
+                    {task.title}
+                  </Typography>
+                  {task.description ? (
+                    <Typography color="text.secondary" variant="body2">
+                      {task.description}
+                    </Typography>
+                  ) : null}
+                </Box>
+              </Box>
+              <Stack className="task-actions" direction="row" spacing={0.5} onClick={stopCardEdit} onKeyDown={(event) => event.stopPropagation()}>
+                <IconButton aria-label="Delete task" color="error" type="button" onClick={() => onDelete(task)}>
+                  <DeleteIcon />
+                </IconButton>
+              </Stack>
+              {task.tags.length > 0 ? (
+                <Box className="tags" component="ul" aria-label={`Tags for ${task.title}`} onClick={stopCardEdit} onKeyDown={(event) => event.stopPropagation()}>
+                  {task.tags.map((tag) => (
+                    <li key={`${tag.source}:${tag.name}`}>
+                      <Chip component="button" label={tag.name} onClick={() => onTagClick(tag.name)} size="small" />
+                    </li>
+                  ))}
+                </Box>
+              ) : null}
             </>
           )}
-        </article>
+        </Paper>
       ))}
-    </section>
+    </Stack>
   );
 }

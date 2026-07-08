@@ -36,6 +36,18 @@ pageSize=20
 
 List responses include `tasks`, `total`, `page`, `pageSize`, and `totalPages`. The default page size is 20, and custom page sizes are capped at 100.
 
+### List tags
+
+```text
+GET /api/tasks/tags
+```
+
+Returns known task tags for autocomplete and filtering:
+
+```json
+{ "tags": ["errands", "shopping", "work"] }
+```
+
 ### Create task
 
 ```text

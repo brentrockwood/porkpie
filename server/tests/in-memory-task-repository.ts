@@ -23,6 +23,13 @@ export class InMemoryTaskRepository implements TaskRepository {
     };
   }
 
+  async listTags(userId: string): Promise<string[]> {
+    const tags = [...this.tasks.values()]
+      .filter((task) => task.userId === userId)
+      .flatMap((task) => task.tags.map((tag) => tag.name));
+    return [...new Set(tags)].sort();
+  }
+
   async findById(userId: string, id: string): Promise<Task | null> {
     const task = this.tasks.get(id);
     return task && task.userId === userId ? stripUserId(task) : null;

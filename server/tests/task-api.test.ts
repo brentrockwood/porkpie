@@ -79,6 +79,9 @@ describe("task API", () => {
 
     const completedFiltered = await request(app).get("/api/tasks?completed=false").expect(200);
     expect(completedFiltered.body.tasks).toHaveLength(2);
+
+    const tags = await request(app).get("/api/tasks/tags").expect(200);
+    expect(tags.body).toEqual({ tags: ["errands", "shopping", "work"] });
   });
 
   it("paginates task lists with 20 items by default", async () => {
@@ -108,6 +111,17 @@ describe("task API", () => {
     const response = await request(app).get("/api/tasks?pageSize=101").expect(400);
 
     expect(response.body).toEqual({ error: "pageSize must be at most 100" });
+  });
+
+  it("rejects too many tags", async () => {
+    const app = testApp();
+
+    const response = await request(app)
+      .post("/api/tasks")
+      .send({ title: "Too many tags", tags: Array.from({ length: 21 }, (_, index) => `tag-${index}`) })
+      .expect(400);
+
+    expect(response.body.error).toBe("tags must contain at most 20 items");
   });
 
   it("rejects blank task titles", async () => {
