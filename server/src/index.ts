@@ -2,13 +2,16 @@ import { createApp } from "./app.js";
 import { loadConfig } from "./config/env.js";
 import { createPool } from "./db/pool.js";
 import { OllamaTaskClassifier } from "./tasks/ollama-task-classifier.js";
-import { HeuristicTaskClassifier, type TaskClassifier } from "./tasks/task-classifier.js";
+import { HeuristicTaskClassifier, type ClassifierLogEvent, type TaskClassifier } from "./tasks/task-classifier.js";
 import { PostgresTaskRepository } from "./tasks/task-repository.js";
 import { TaskService } from "./tasks/task-service.js";
 
 const config = loadConfig();
 const pool = createPool(config.databaseUrl);
 const repository = new PostgresTaskRepository(pool);
+const classifierLogger = (event: ClassifierLogEvent) => {
+  console.log(JSON.stringify({ event: "task_classification", ...event }));
+};
 const fallbackClassifier = new HeuristicTaskClassifier();
 const classifier: TaskClassifier = config.ollamaBaseUrl && config.ollamaModel
   ? new OllamaTaskClassifier({
@@ -16,8 +19,9 @@ const classifier: TaskClassifier = config.ollamaBaseUrl && config.ollamaModel
       model: config.ollamaModel,
       timeoutMs: config.ollamaTimeoutMs,
       fallback: fallbackClassifier,
+      logger: classifierLogger,
     })
-  : fallbackClassifier;
+  : new HeuristicTaskClassifier(classifierLogger);
 const taskService = new TaskService(repository, classifier);
 const app = createApp(taskService, config.clientOrigin);
 

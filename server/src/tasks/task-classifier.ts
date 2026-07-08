@@ -9,6 +9,16 @@ export type ClassifiedTaskTag = {
   confidence: number;
 };
 
+export type ClassifierLogEvent = {
+  classifier: "heuristic" | "ollama";
+  outcome: "success" | "empty" | "fallback";
+  tagCount: number;
+  model?: string;
+  reason?: "error" | "invalid_response";
+};
+
+export type ClassifierLogger = (event: ClassifierLogEvent) => void;
+
 export interface TaskClassifier {
   classify(input: ClassificationInput): Promise<ClassifiedTaskTag[]>;
 }
@@ -27,13 +37,18 @@ const RULES: Rule[] = [
 ];
 
 export class HeuristicTaskClassifier implements TaskClassifier {
+  constructor(private readonly logger?: ClassifierLogger) {}
+
   async classify(input: ClassificationInput): Promise<ClassifiedTaskTag[]> {
     const text = `${input.title} ${input.description ?? ""}`.toLowerCase();
     const manualTags = new Set(input.manualTags);
 
-    return RULES.filter((rule) => !manualTags.has(rule.tag) && rule.keywords.some((keyword) => hasWord(text, keyword)))
+    const tags = RULES.filter((rule) => !manualTags.has(rule.tag) && rule.keywords.some((keyword) => hasWord(text, keyword)))
       .map((rule) => ({ name: rule.tag, confidence: rule.confidence }))
       .sort((left, right) => left.name.localeCompare(right.name));
+
+    this.logger?.({ classifier: "heuristic", outcome: tags.length > 0 ? "success" : "empty", tagCount: tags.length });
+    return tags;
   }
 }
 
