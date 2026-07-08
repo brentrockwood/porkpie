@@ -41,7 +41,7 @@ The task service depends on that context, not on a concrete OAuth/JWT/session pr
 
 ## AI seam
 
-Task classification is a replaceable service boundary, not mixed into CRUD handlers. The default implementation is deterministic and heuristic-based so tests remain stable. When `OLLAMA_BASE_URL` and `OLLAMA_MODEL` are configured, the server uses Ollama for structured JSON-schema tag suggestions and falls back to the heuristic classifier if the model call fails or returns unusable tags.
+Task classification is a replaceable service boundary, not mixed into CRUD handlers. The default implementation is deterministic and heuristic-based so tests remain stable. When `OLLAMA_BASE_URL` and `OLLAMA_MODEL` are configured, the server uses Ollama for structured JSON-schema tag suggestions and falls back to the heuristic classifier if the model call fails or returns unusable tags. Classification emits one metadata-only log event per task creation path (`classifier`, `outcome`, `tagCount`, optional `model`/`reason`) without logging task title or description content.
 
 Current recommended local model:
 

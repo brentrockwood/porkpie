@@ -1,10 +1,11 @@
-import type { ClassifiedTaskTag, ClassificationInput, TaskClassifier } from "./task-classifier.js";
+import type { ClassifiedTaskTag, ClassificationInput, ClassifierLogger, TaskClassifier } from "./task-classifier.js";
 
 export type OllamaTaskClassifierConfig = {
   baseUrl: string;
   model: string;
   timeoutMs?: number;
   fallback: TaskClassifier;
+  logger?: ClassifierLogger;
 };
 
 const DEFAULT_TIMEOUT_MS = 5_000;
@@ -44,10 +45,19 @@ export class OllamaTaskClassifier implements TaskClassifier {
       const response = await this.callOllama(input);
       const parsed = JSON.parse(response) as unknown;
       const tags = parseTags(parsed, input.manualTags);
-      return tags ?? this.config.fallback.classify(input);
+      if (tags) {
+        this.config.logger?.({ classifier: "ollama", outcome: tags.length > 0 ? "success" : "empty", tagCount: tags.length, model: this.config.model });
+        return tags;
+      }
+
+      const fallbackTags = await this.config.fallback.classify(input);
+      this.config.logger?.({ classifier: "ollama", outcome: "fallback", tagCount: fallbackTags.length, model: this.config.model, reason: "invalid_response" });
+      return fallbackTags;
     } catch (error) {
       console.warn("Ollama task classification failed; using heuristic fallback", error);
-      return this.config.fallback.classify(input);
+      const fallbackTags = await this.config.fallback.classify(input);
+      this.config.logger?.({ classifier: "ollama", outcome: "fallback", tagCount: fallbackTags.length, model: this.config.model, reason: "error" });
+      return fallbackTags;
     }
   }
 
