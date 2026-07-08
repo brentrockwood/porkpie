@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import type { Task } from "@porkpie/shared";
 import { createTask, deleteTask, listTasks, updateTask } from "./api";
-import { PaginationControls } from "./components/PaginationControls";
+import { LoadMoreControls } from "./components/LoadMoreControls";
 import { TaskFiltersForm } from "./components/TaskFiltersForm";
 import { TaskForm } from "./components/TaskForm";
 import { TaskList } from "./components/TaskList";
@@ -107,7 +107,7 @@ export function App() {
         signal,
       );
       if (requestId !== reloadRequestId.current) return;
-      setTasks(loaded.tasks);
+      setTasks((current) => (page === 1 ? loaded.tasks : [...current, ...loaded.tasks]));
       setTotal(loaded.total);
       setTotalPages(loaded.totalPages);
     } catch (err) {
@@ -122,7 +122,8 @@ export function App() {
 
     try {
       await createTask({ title, description, tags: parseTags(tagInput) });
-      await reloadTasks();
+      if (page === 1) await reloadTasks();
+      else setPage(1);
       setTitle("");
       setDescription("");
       setTagInput("");
@@ -136,7 +137,8 @@ export function App() {
 
     try {
       await updateTask(task.id, { completed: !task.completed });
-      await reloadTasks();
+      if (page === 1) await reloadTasks();
+      else setPage(1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update task");
     }
@@ -152,7 +154,8 @@ export function App() {
         tags: parseTags(editingTags),
       });
       clearEditing();
-      await reloadTasks();
+      if (page === 1) await reloadTasks();
+      else setPage(1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save task");
     }
@@ -166,11 +169,8 @@ export function App() {
       if (editingId === task.id) {
         clearEditing();
       }
-      if (tasks.length === 1 && page > 1) {
-        setPage((current) => current - 1);
-        return;
-      }
-      await reloadTasks();
+      if (page === 1) await reloadTasks();
+      else setPage(1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete task");
     }
@@ -248,12 +248,11 @@ export function App() {
 
       {error ? <p className="error">{error}</p> : null}
 
-      <PaginationControls
-        page={page}
+      <LoadMoreControls
+        hasMore={page < totalPages}
         total={total}
-        totalPages={totalPages}
-        onPreviousPage={() => setPage((current) => Math.max(1, current - 1))}
-        onNextPage={() => setPage((current) => current + 1)}
+        visibleCount={tasks.length}
+        onLoadMore={() => setPage((current) => current + 1)}
       />
 
       <TaskList
