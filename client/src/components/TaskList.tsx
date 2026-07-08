@@ -20,7 +20,7 @@ type TaskListProps = {
   availableTags: string[];
   onToggle: (task: Task) => void;
   onStartEditing: (task: Task) => void;
-  onSave: (task: Task) => void;
+  onSave: (task: Task, tagsOverride?: string) => void;
   onCancelEditing: () => void;
   onDelete: (task: Task) => void;
   onEditingTitleChange: (value: string) => void;
@@ -98,6 +98,7 @@ export function TaskList({
             checkedIcon={<CheckCircleIcon />}
             icon={<RadioButtonUncheckedIcon />}
             onClick={stopCardEdit}
+            onKeyDown={(event) => event.stopPropagation()}
             onChange={() => onToggle(task)}
           />
           {editingId === task.id ? (
@@ -127,7 +128,7 @@ export function TaskList({
                     availableTags={availableTags}
                     label="Tags"
                     onChange={onEditingTagsChange}
-                    onEnter={() => onSave(task)}
+                    onEnter={(nextTags) => onSave(task, nextTags)}
                     placeholder="Tags"
                     value={editingTags}
                   />
@@ -159,13 +160,13 @@ export function TaskList({
                   ) : null}
                 </Box>
               </Box>
-              <Stack className="task-actions" direction="row" spacing={0.5} onClick={stopCardEdit}>
+              <Stack className="task-actions" direction="row" spacing={0.5} onClick={stopCardEdit} onKeyDown={(event) => event.stopPropagation()}>
                 <IconButton aria-label="Delete task" color="error" type="button" onClick={() => onDelete(task)}>
                   <DeleteIcon />
                 </IconButton>
               </Stack>
               {task.tags.length > 0 ? (
-                <Box className="tags" component="ul" aria-label={`Tags for ${task.title}`} onClick={stopCardEdit}>
+                <Box className="tags" component="ul" aria-label={`Tags for ${task.title}`} onClick={stopCardEdit} onKeyDown={(event) => event.stopPropagation()}>
                   {task.tags.map((tag) => (
                     <li key={`${tag.source}:${tag.name}`}>
                       <Chip component="button" label={tag.name} onClick={() => onTagClick(tag.name)} size="small" />

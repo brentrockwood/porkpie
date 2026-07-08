@@ -39,6 +39,15 @@
   justify-content: space-between;
 }
 
+.active-filter-chips {
+  padding-top: 0.75rem;
+}
+
+.filter-chip {
+  border-radius: 999px;
+  text-transform: none;
+}
+
 .filter-panel {
   padding-top: 1rem;
 }

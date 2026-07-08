@@ -8,7 +8,7 @@ type TagAutocompleteProps = {
   value: string;
   availableTags: string[];
   onChange: (value: string) => void;
-  onEnter?: () => void;
+  onEnter?: (value: string) => void;
 };
 
 export function TagAutocomplete({ label, placeholder, value, availableTags, onChange, onEnter }: TagAutocompleteProps) {
@@ -49,10 +49,11 @@ export function TagAutocomplete({ label, placeholder, value, availableTags, onCh
         onKeyDown={(event) => {
           if (event.key !== "Enter") return;
           event.preventDefault();
+          let nextValue = tags.join(", ");
           flushSync(() => {
-            commitInput();
+            nextValue = commitInput();
           });
-          onEnter?.();
+          onEnter?.(nextValue);
         }}
         placeholder={placeholder}
         value={inputValue}

@@ -160,14 +160,14 @@ export function App() {
     }
   }
 
-  async function handleSave(task: Task) {
+  async function handleSave(task: Task, tagsOverride?: string) {
     setError(null);
 
     try {
       await updateTask(task.id, {
         title: editingTitle,
         description: editingDescription,
-        tags: parseTags(editingTags),
+        tags: parseTags(tagsOverride ?? editingTags),
       });
       clearEditing();
       if (page === 1) await reloadTasks();
