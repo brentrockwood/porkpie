@@ -1,6 +1,6 @@
 import type { Pool } from "pg";
 import request from "supertest";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../../src/app.js";
 import { createPool } from "../../src/db/pool.js";
 import { runMigrations } from "../../src/db/migrate.js";
@@ -16,6 +16,9 @@ describeSystem("task API system test", () => {
   beforeAll(async () => {
     await runMigrations(databaseUrl!);
     pool = createPool(databaseUrl!);
+  });
+
+  beforeEach(async () => {
     await pool.query("TRUNCATE tasks CASCADE");
   });
 
@@ -107,6 +110,26 @@ describeSystem("task API system test", () => {
     expect(updatedTagFiltered.body.tasks[0].tags).toEqual([
       { name: "grocery", source: "manual", confidence: null },
     ]);
+  });
+
+  it("paginates task lists with metadata", async () => {
+    const app = createApp(new TaskService(new PostgresTaskRepository(pool)));
+
+    for (let index = 1; index <= 21; index += 1) {
+      await request(app).post("/api/tasks").send({ title: `Paged task ${index}` }).expect(201);
+    }
+
+    const firstPage = await request(app).get("/api/tasks").expect(200);
+    expect(firstPage.body.tasks).toHaveLength(20);
+    expect(firstPage.body).toMatchObject({
+      total: 21,
+      page: 1,
+      pageSize: 20,
+      totalPages: 2,
+    });
+
+    const secondPage = await request(app).get("/api/tasks?page=2").expect(200);
+    expect(secondPage.body.tasks).toHaveLength(1);
   });
 
   it("updates only provided fields and can clear description", async () => {

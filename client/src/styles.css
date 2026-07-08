@@ -24,8 +24,13 @@ button {
   padding: 0.65rem 0.9rem;
 }
 
-button:hover {
+button:hover:not(:disabled) {
   background: #374151;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .app-shell {
@@ -104,6 +109,15 @@ textarea {
 
 .empty {
   color: #64748b;
+}
+
+.pagination {
+  align-items: center;
+  color: #64748b;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin: 1rem 0;
 }
 
 .task-list {

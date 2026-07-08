@@ -30,7 +30,11 @@ Optional query parameters:
 search=milk
 tag=shopping
 completed=true|false
+page=1
+pageSize=20
 ```
+
+List responses include `tasks`, `total`, `page`, `pageSize`, and `totalPages`. The default page size is 20.
 
 ### Create task
 

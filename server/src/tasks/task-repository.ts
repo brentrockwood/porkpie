@@ -6,6 +6,16 @@ export type TaskFilters = {
   completed?: boolean;
   tag?: string;
   search?: string;
+  page: number;
+  pageSize: number;
+};
+
+export type PagedTasks = {
+  tasks: Task[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 };
 
 export type NewTask = {
@@ -24,7 +34,7 @@ export type TaskPatch = {
 };
 
 export interface TaskRepository {
-  list(userId: string, filters?: TaskFilters): Promise<Task[]>;
+  list(userId: string, filters: TaskFilters): Promise<PagedTasks>;
   findById(userId: string, id: string): Promise<Task | null>;
   create(task: NewTask): Promise<Task>;
   update(userId: string, id: string, patch: TaskPatch): Promise<Task | null>;
@@ -58,7 +68,7 @@ function escapeLikePattern(value: string): string {
 export class PostgresTaskRepository implements TaskRepository {
   constructor(private readonly pool: Pool) {}
 
-  async list(userId: string, filters: TaskFilters = {}): Promise<Task[]> {
+  async list(userId: string, filters: TaskFilters): Promise<PagedTasks> {
     const values: unknown[] = [userId];
     const where = ["tasks.user_id = $1"];
 
@@ -82,14 +92,29 @@ export class PostgresTaskRepository implements TaskRepository {
       )`);
     }
 
-    const result = await this.pool.query(
-      `SELECT tasks.* FROM tasks
-       WHERE ${where.join(" AND ")}
-       ORDER BY tasks.created_at DESC`,
+    const countResult = await this.pool.query(
+      `SELECT count(*)::int AS total FROM tasks
+       WHERE ${where.join(" AND ")}`,
       values,
     );
 
-    return this.attachTags(result.rows);
+    values.push(filters.pageSize, (filters.page - 1) * filters.pageSize);
+    const result = await this.pool.query(
+      `SELECT tasks.* FROM tasks
+       WHERE ${where.join(" AND ")}
+       ORDER BY tasks.created_at DESC
+       LIMIT $${values.length - 1} OFFSET $${values.length}`,
+      values,
+    );
+
+    const total = Number(countResult.rows[0]?.total ?? 0);
+    return {
+      tasks: await this.attachTags(result.rows),
+      total,
+      page: filters.page,
+      pageSize: filters.pageSize,
+      totalPages: Math.max(1, Math.ceil(total / filters.pageSize)),
+    };
   }
 
   async findById(userId: string, id: string): Promise<Task | null> {

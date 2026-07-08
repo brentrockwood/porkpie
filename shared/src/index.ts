@@ -29,4 +29,8 @@ export type UpdateTaskRequest = {
 
 export type TaskListResponse = {
   tasks: Task[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 };

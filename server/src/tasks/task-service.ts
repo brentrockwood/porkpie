@@ -1,14 +1,14 @@
 import { randomUUID } from "node:crypto";
 import type { CreateTaskRequest, Task, UpdateTaskRequest } from "@porkpie/shared";
 import type { AuthContext } from "../auth/auth-context.js";
-import type { TaskFilters, TaskRepository } from "./task-repository.js";
+import type { PagedTasks, TaskFilters, TaskRepository } from "./task-repository.js";
 
 export class ValidationError extends Error {}
 
 export class TaskService {
   constructor(private readonly repository: TaskRepository) {}
 
-  listTasks(auth: AuthContext, filters: TaskFilters = {}): Promise<Task[]> {
+  listTasks(auth: AuthContext, filters: TaskFilters): Promise<PagedTasks> {
     return this.repository.list(auth.userId, filters);
   }
 

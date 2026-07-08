@@ -12,6 +12,9 @@ export function App() {
   const [searchFilter, setSearchFilter] = useState("");
   const [tagFilter, setTagFilter] = useState("");
   const [completionFilter, setCompletionFilter] = useState<TaskFilters["completed"]>("all");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
   const [editingDescription, setEditingDescription] = useState("");
@@ -20,7 +23,7 @@ export function App() {
 
   useEffect(() => {
     void reloadTasks();
-  }, [searchFilter, tagFilter, completionFilter]);
+  }, [searchFilter, tagFilter, completionFilter, page]);
 
   async function reloadTasks() {
     try {
@@ -29,8 +32,11 @@ export function App() {
         search: searchFilter,
         tag: tagFilter,
         completed: completionFilter,
+        page,
       });
-      setTasks(loaded);
+      setTasks(loaded.tasks);
+      setTotal(loaded.total);
+      setTotalPages(loaded.totalPages);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load tasks");
     }
@@ -134,15 +140,35 @@ export function App() {
       <section className="filters" aria-label="Task filters">
         <label>
           Search
-          <input value={searchFilter} onChange={(event) => setSearchFilter(event.target.value)} placeholder="Search tasks" />
+          <input
+            value={searchFilter}
+            onChange={(event) => {
+              setSearchFilter(event.target.value);
+              setPage(1);
+            }}
+            placeholder="Search tasks"
+          />
         </label>
         <label>
           Tag
-          <input value={tagFilter} onChange={(event) => setTagFilter(event.target.value)} placeholder="Filter by tag" />
+          <input
+            value={tagFilter}
+            onChange={(event) => {
+              setTagFilter(event.target.value);
+              setPage(1);
+            }}
+            placeholder="Filter by tag"
+          />
         </label>
         <label>
           Status
-          <select value={completionFilter} onChange={(event) => setCompletionFilter(event.target.value as TaskFilters["completed"])}>
+          <select
+            value={completionFilter}
+            onChange={(event) => {
+              setCompletionFilter(event.target.value as TaskFilters["completed"]);
+              setPage(1);
+            }}
+          >
             <option value="all">All</option>
             <option value="incomplete">Incomplete</option>
             <option value="complete">Complete</option>
@@ -151,6 +177,18 @@ export function App() {
       </section>
 
       {error ? <p className="error">{error}</p> : null}
+
+      <nav className="pagination" aria-label="Task pages">
+        <button type="button" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
+          Previous
+        </button>
+        <span>
+          Page {page} of {totalPages} · {total} tasks
+        </span>
+        <button type="button" disabled={page >= totalPages} onClick={() => setPage((current) => current + 1)}>
+          Next
+        </button>
+      </nav>
 
       <section className="task-list" aria-label="Tasks">
         {tasks.length === 0 ? <p className="empty">No tasks yet.</p> : null}

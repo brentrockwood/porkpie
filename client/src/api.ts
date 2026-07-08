@@ -6,21 +6,22 @@ export type TaskFilters = {
   search?: string;
   tag?: string;
   completed?: "all" | "complete" | "incomplete";
+  page?: number;
 };
 
-export async function listTasks(filters: TaskFilters = {}): Promise<Task[]> {
+export async function listTasks(filters: TaskFilters = {}): Promise<TaskListResponse> {
   const params = new URLSearchParams();
 
   if (filters.search) params.set("search", filters.search);
   if (filters.tag) params.set("tag", filters.tag);
   if (filters.completed === "complete") params.set("completed", "true");
   if (filters.completed === "incomplete") params.set("completed", "false");
+  if (filters.page) params.set("page", String(filters.page));
 
   const query = params.toString();
   const response = await fetch(`${apiBaseUrl}/api/tasks${query ? `?${query}` : ""}`);
   await ensureOk(response);
-  const body = (await response.json()) as TaskListResponse;
-  return body.tasks;
+  return (await response.json()) as TaskListResponse;
 }
 
 export async function createTask(input: CreateTaskRequest): Promise<Task> {

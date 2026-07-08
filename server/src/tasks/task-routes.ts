@@ -11,8 +11,8 @@ export function createTaskRouter(taskService: TaskService): Router {
   router.get(
     "/",
     asyncHandler(async (request, response) => {
-      const tasks = await taskService.listTasks(demoAuthContext, parseFilters(request.query));
-      response.json({ tasks });
+      const result = await taskService.listTasks(demoAuthContext, parseFilters(request.query));
+      response.json(result);
     }),
   );
 
@@ -64,7 +64,7 @@ export function createTaskRouter(taskService: TaskService): Router {
 }
 
 function parseFilters(query: Record<string, unknown>): TaskFilters {
-  const filters: TaskFilters = {};
+  const filters: TaskFilters = { page: 1, pageSize: 20 };
 
   if (query.completed !== undefined) {
     if (query.completed === "true") filters.completed = true;
@@ -80,5 +80,21 @@ function parseFilters(query: Record<string, unknown>): TaskFilters {
     filters.search = query.search.trim();
   }
 
+  if (query.page !== undefined) {
+    filters.page = parsePositiveInteger(query.page, "page");
+  }
+
+  if (query.pageSize !== undefined) {
+    filters.pageSize = parsePositiveInteger(query.pageSize, "pageSize");
+  }
+
   return filters;
+}
+
+function parsePositiveInteger(value: unknown, name: string): number {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new ValidationError(`${name} must be a positive integer`);
+  }
+  return parsed;
 }

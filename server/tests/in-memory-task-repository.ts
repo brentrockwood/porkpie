@@ -1,17 +1,26 @@
 import type { Task } from "@porkpie/shared";
-import type { NewTask, TaskFilters, TaskPatch, TaskRepository } from "../src/tasks/task-repository.js";
+import type { NewTask, PagedTasks, TaskFilters, TaskPatch, TaskRepository } from "../src/tasks/task-repository.js";
 
 export class InMemoryTaskRepository implements TaskRepository {
   private readonly tasks = new Map<string, Task & { userId: string }>();
 
-  async list(userId: string, filters: TaskFilters = {}): Promise<Task[]> {
-    return [...this.tasks.values()]
+  async list(userId: string, filters: TaskFilters): Promise<PagedTasks> {
+    const filtered = [...this.tasks.values()]
       .filter((task) => task.userId === userId)
       .filter((task) => filters.completed === undefined || task.completed === filters.completed)
       .filter((task) => !filters.tag || task.tags.some((tag) => tag.name === filters.tag))
       .filter((task) => !filters.search || matchesSearch(task, filters.search))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       .map(stripUserId);
+
+    const start = (filters.page - 1) * filters.pageSize;
+    return {
+      tasks: filtered.slice(start, start + filters.pageSize),
+      total: filtered.length,
+      page: filters.page,
+      pageSize: filters.pageSize,
+      totalPages: Math.max(1, Math.ceil(filtered.length / filters.pageSize)),
+    };
   }
 
   async findById(userId: string, id: string): Promise<Task | null> {

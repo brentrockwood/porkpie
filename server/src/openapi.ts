@@ -29,6 +29,8 @@ export const openApiDocument = {
           { $ref: "#/components/parameters/SearchFilter" },
           { $ref: "#/components/parameters/TagFilter" },
           { $ref: "#/components/parameters/CompletedFilter" },
+          { $ref: "#/components/parameters/Page" },
+          { $ref: "#/components/parameters/PageSize" },
         ],
         responses: {
           "200": {
@@ -140,6 +142,18 @@ export const openApiDocument = {
         required: false,
         schema: { type: "boolean" },
       },
+      Page: {
+        name: "page",
+        in: "query",
+        required: false,
+        schema: { type: "integer", minimum: 1, default: 1 },
+      },
+      PageSize: {
+        name: "pageSize",
+        in: "query",
+        required: false,
+        schema: { type: "integer", minimum: 1, default: 20 },
+      },
     },
     responses: {
       ValidationError: {
@@ -216,12 +230,16 @@ export const openApiDocument = {
       },
       TaskListResponse: {
         type: "object",
-        required: ["tasks"],
+        required: ["tasks", "total", "page", "pageSize", "totalPages"],
         properties: {
           tasks: {
             type: "array",
             items: { $ref: "#/components/schemas/Task" },
           },
+          total: { type: "integer", minimum: 0 },
+          page: { type: "integer", minimum: 1 },
+          pageSize: { type: "integer", minimum: 1 },
+          totalPages: { type: "integer", minimum: 1 },
         },
       },
       ErrorResponse: {

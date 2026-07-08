@@ -81,6 +81,27 @@ describe("task API", () => {
     expect(completedFiltered.body.tasks).toHaveLength(2);
   });
 
+  it("paginates task lists with 20 items by default", async () => {
+    const app = testApp();
+
+    for (let index = 1; index <= 21; index += 1) {
+      await request(app).post("/api/tasks").send({ title: `Task ${index}` }).expect(201);
+    }
+
+    const firstPage = await request(app).get("/api/tasks").expect(200);
+    expect(firstPage.body.tasks).toHaveLength(20);
+    expect(firstPage.body).toMatchObject({
+      total: 21,
+      page: 1,
+      pageSize: 20,
+      totalPages: 2,
+    });
+
+    const secondPage = await request(app).get("/api/tasks?page=2").expect(200);
+    expect(secondPage.body.tasks).toHaveLength(1);
+    expect(secondPage.body.page).toBe(2);
+  });
+
   it("rejects blank task titles", async () => {
     const app = testApp();
 
