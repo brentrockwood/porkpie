@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { Autocomplete, Badge, Button, Collapse, FormControlLabel, Paper, Stack, Switch, TextField } from "@mui/material";
+import FilterListIcon from "@mui/icons-material/FilterList";
 
 type TaskFiltersFormProps = {
   searchFilter: string;
@@ -27,39 +29,38 @@ export function TaskFiltersForm({
   }, [activeFilterCount]);
 
   return (
-    <section className="filters" aria-label="Task filters">
+    <Paper className="filters" component="section" elevation={0} aria-label="Task filters">
       <div className="filter-summary">
-        <button type="button" aria-expanded={isOpen} onClick={() => setIsOpen((current) => !current)}>
-          Filter{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ""}
-        </button>
-        <label className="switch-field">
-          <span>Show completed</span>
-          <input checked={showCompleted} onChange={(event) => onShowCompletedChange(event.target.checked)} type="checkbox" />
-        </label>
+        <Badge badgeContent={activeFilterCount} color="primary" invisible={activeFilterCount === 0}>
+          <Button aria-expanded={isOpen} onClick={() => setIsOpen((current) => !current)} startIcon={<FilterListIcon />} type="button" variant="outlined">
+            Filter
+          </Button>
+        </Badge>
+        <FormControlLabel
+          className="switch-field"
+          control={<Switch checked={showCompleted} onChange={(event) => onShowCompletedChange(event.target.checked)} />}
+          label="Show completed"
+        />
       </div>
 
-      {isOpen ? (
-        <div className="filter-panel">
-          <label>
-            Search
-            <input value={searchFilter} onChange={(event) => onSearchFilterChange(event.target.value)} placeholder="Search tasks" />
-          </label>
-          <label>
-            Tag
-            <input
-              list="tag-filter-options"
-              value={tagFilter}
-              onChange={(event) => onTagFilterChange(event.target.value)}
-              placeholder="Filter by tag"
-            />
-            <datalist id="tag-filter-options">
-              {availableTags.map((tag) => (
-                <option key={tag} value={tag} />
-              ))}
-            </datalist>
-          </label>
-        </div>
-      ) : null}
-    </section>
+      <Collapse in={isOpen} unmountOnExit>
+        <Stack className="filter-panel" spacing={2}>
+          <TextField
+            fullWidth
+            label="Search"
+            onChange={(event) => onSearchFilterChange(event.target.value)}
+            placeholder="Search tasks"
+            value={searchFilter}
+          />
+          <Autocomplete
+            freeSolo
+            inputValue={tagFilter}
+            onInputChange={(_event, value) => onTagFilterChange(value)}
+            options={availableTags}
+            renderInput={(params) => <TextField {...params} fullWidth label="Tag" placeholder="Filter by tag" />}
+          />
+        </Stack>
+      </Collapse>
+    </Paper>
   );
 }

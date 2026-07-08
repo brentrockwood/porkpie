@@ -1,6 +1,10 @@
 import type { KeyboardEvent } from "react";
 import type { Task } from "@porkpie/shared";
 import type { TaskFilters } from "../api";
+import { Box, ButtonBase, Checkbox, Chip, IconButton, Paper, Stack, TextField, Typography } from "@mui/material";
+import CancelIcon from "@mui/icons-material/Close";
+import DeleteIcon from "@mui/icons-material/Delete";
+import SaveIcon from "@mui/icons-material/Check";
 
 type TaskListProps = {
   tasks: Task[];
@@ -53,86 +57,94 @@ export function TaskList({
   }
 
   return (
-    <section className="task-list" aria-label="Tasks">
+    <Stack className="task-list" component="section" aria-label="Tasks" spacing={1.5}>
       {tasks.length === 0 ? (
-        <p className="empty">
+        <Typography className="empty" color="text.secondary">
           {hasActiveFilters || completionFilter !== "all" ? "No tasks match the current filters." : "No tasks yet."}
-        </p>
+        </Typography>
       ) : null}
       {tasks.map((task) => (
-        <article className="task-card" key={task.id}>
-          <input
+        <Paper className="task-card" component="article" elevation={2} key={task.id}>
+          <Checkbox
             aria-label={`Mark ${task.title} ${task.completed ? "incomplete" : "complete"}`}
             checked={task.completed}
             onChange={() => onToggle(task)}
-            type="checkbox"
           />
           {editingId === task.id ? (
-            <form
+            <Box
               className="task-edit-form"
-              onKeyDown={(event) => handleEditKeyDown(event, task)}
+              component="form"
+              onKeyDown={(event: KeyboardEvent<HTMLFormElement>) => handleEditKeyDown(event, task)}
               onSubmit={(event) => {
                 event.preventDefault();
                 onSave(task);
               }}
             >
-              <div className="task-content">
-                <div className="edit-fields">
-                  <input aria-label="Task title" value={editingTitle} onChange={(event) => onEditingTitleChange(event.target.value)} />
-                  <textarea
+              <Box className="task-content">
+                <Stack className="edit-fields" spacing={1}>
+                  <TextField aria-label="Task title" fullWidth value={editingTitle} onChange={(event) => onEditingTitleChange(event.target.value)} />
+                  <TextField
                     aria-label="Task description"
+                    fullWidth
+                    multiline
+                    minRows={2}
                     value={editingDescription}
                     onChange={(event) => onEditingDescriptionChange(event.target.value)}
                     placeholder="Optional details"
                   />
-                  <input
+                  <TextField
                     aria-label="Task tags"
+                    fullWidth
                     value={editingTags}
                     onChange={(event) => onEditingTagsChange(event.target.value)}
                     placeholder="Tags"
                   />
-                </div>
-              </div>
-              <div className="task-actions">
-                <button aria-label="Save task" className="icon-button" type="submit">
-                  ✓
-                </button>
-                <button aria-label="Cancel editing" className="icon-button" type="button" onClick={onCancelEditing}>
-                  ✕
-                </button>
-                <button aria-label="Delete task" className="icon-button danger" type="button" onClick={() => onDelete(task)}>
-                  🗑
-                </button>
-              </div>
-            </form>
+                </Stack>
+              </Box>
+              <Stack className="task-actions" direction="row" spacing={0.5}>
+                <IconButton aria-label="Save task" color="primary" type="submit">
+                  <SaveIcon />
+                </IconButton>
+                <IconButton aria-label="Cancel editing" type="button" onClick={onCancelEditing}>
+                  <CancelIcon />
+                </IconButton>
+                <IconButton aria-label="Delete task" color="error" type="button" onClick={() => onDelete(task)}>
+                  <DeleteIcon />
+                </IconButton>
+              </Stack>
+            </Box>
           ) : (
             <>
-              <button className="task-open-button" type="button" onClick={() => onStartEditing(task)}>
-                <span className="task-content">
-                  <h2 className={task.completed ? "completed" : ""}>{task.title}</h2>
-                  {task.description ? <p>{task.description}</p> : null}
-                </span>
-              </button>
-              <div className="task-actions">
-                <button aria-label="Delete task" className="icon-button danger" type="button" onClick={() => onDelete(task)}>
-                  🗑
-                </button>
-              </div>
+              <ButtonBase className="task-open-button" type="button" onClick={() => onStartEditing(task)}>
+                <Box className="task-content">
+                  <Typography className={task.completed ? "completed" : ""} component="h2" variant="subtitle1">
+                    {task.title}
+                  </Typography>
+                  {task.description ? (
+                    <Typography color="text.secondary" variant="body2">
+                      {task.description}
+                    </Typography>
+                  ) : null}
+                </Box>
+              </ButtonBase>
+              <Stack className="task-actions" direction="row" spacing={0.5}>
+                <IconButton aria-label="Delete task" color="error" type="button" onClick={() => onDelete(task)}>
+                  <DeleteIcon />
+                </IconButton>
+              </Stack>
               {task.tags.length > 0 ? (
-                <ul className="tags" aria-label={`Tags for ${task.title}`}>
+                <Box className="tags" component="ul" aria-label={`Tags for ${task.title}`}>
                   {task.tags.map((tag) => (
                     <li key={`${tag.source}:${tag.name}`}>
-                      <button type="button" onClick={() => onTagClick(tag.name)}>
-                        {tag.name}
-                      </button>
+                      <Chip component="button" label={tag.name} onClick={() => onTagClick(tag.name)} size="small" />
                     </li>
                   ))}
-                </ul>
+                </Box>
               ) : null}
             </>
           )}
-        </article>
+        </Paper>
       ))}
-    </section>
+    </Stack>
   );
 }

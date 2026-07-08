@@ -1,3 +1,5 @@
+import { Box, Button, Typography } from "@mui/material";
+
 type LoadMoreControlsProps = {
   hasMore: boolean;
   total: number;
@@ -7,15 +9,15 @@ type LoadMoreControlsProps = {
 
 export function LoadMoreControls({ hasMore, total, visibleCount, onLoadMore }: LoadMoreControlsProps) {
   return (
-    <nav className="load-more" aria-label="More tasks">
-      <span>
+    <Box className="load-more" component="nav" aria-label="More tasks">
+      <Typography color="text.secondary" variant="body2">
         Showing {visibleCount} of {total} {total === 1 ? "task" : "tasks"}
-      </span>
+      </Typography>
       {hasMore ? (
-        <button type="button" onClick={onLoadMore}>
+        <Button type="button" onClick={onLoadMore} variant="outlined">
           Load more
-        </button>
+        </Button>
       ) : null}
-    </nav>
+    </Box>
   );
 }

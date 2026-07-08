@@ -1,4 +1,5 @@
 import type { FormEvent } from "react";
+import { Button, Paper, Stack, TextField } from "@mui/material";
 
 type TaskFormProps = {
   title: string;
@@ -20,20 +21,36 @@ export function TaskForm({
   onSubmit,
 }: TaskFormProps) {
   return (
-    <form className="task-form" onSubmit={onSubmit}>
-      <label>
-        Title
-        <input autoFocus value={title} onChange={(event) => onTitleChange(event.target.value)} placeholder="Buy milk" />
-      </label>
-      <label>
-        Description
-        <textarea value={description} onChange={(event) => onDescriptionChange(event.target.value)} placeholder="Optional details" />
-      </label>
-      <label>
-        Tags
-        <input value={tagInput} onChange={(event) => onTagInputChange(event.target.value)} placeholder="shopping, grocery" />
-      </label>
-      <button type="submit">Create task</button>
-    </form>
+    <Paper className="task-form" component="form" elevation={2} onSubmit={onSubmit}>
+      <Stack spacing={2}>
+        <TextField
+          autoFocus
+          fullWidth
+          label="Title"
+          onChange={(event) => onTitleChange(event.target.value)}
+          placeholder="Buy milk"
+          value={title}
+        />
+        <TextField
+          fullWidth
+          label="Description"
+          multiline
+          minRows={2}
+          onChange={(event) => onDescriptionChange(event.target.value)}
+          placeholder="Optional details"
+          value={description}
+        />
+        <TextField
+          fullWidth
+          label="Tags"
+          onChange={(event) => onTagInputChange(event.target.value)}
+          placeholder="shopping, grocery"
+          value={tagInput}
+        />
+        <Button type="submit" variant="contained">
+          Create task
+        </Button>
+      </Stack>
+    </Paper>
   );
 }

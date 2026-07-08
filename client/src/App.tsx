@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
+import { Alert, Container, Typography } from "@mui/material";
 import type { Task } from "@porkpie/shared";
 import { createTask, deleteTask, listTags, listTasks, updateTask } from "./api";
 import { LoadMoreControls } from "./components/LoadMoreControls";
@@ -237,11 +238,17 @@ export function App() {
   }
 
   return (
-    <main className="app-shell">
+    <Container className="app-shell" component="main" maxWidth="md">
       <header>
-        <p className="eyebrow">Porkpie</p>
-        <h1>Tasks</h1>
-        <p className="lede">A small TypeScript task app built to show clean end-to-end architecture.</p>
+        <Typography className="eyebrow" component="p">
+          Porkpie
+        </Typography>
+        <Typography component="h1" variant="h2">
+          Tasks
+        </Typography>
+        <Typography className="lede" color="text.secondary">
+          A small TypeScript task app built to show clean end-to-end architecture.
+        </Typography>
       </header>
 
       <TaskForm
@@ -264,7 +271,11 @@ export function App() {
         onShowCompletedChange={handleShowCompletedChange}
       />
 
-      {error ? <p className="error">{error}</p> : null}
+      {error ? (
+        <Alert className="error" severity="error">
+          {error}
+        </Alert>
+      ) : null}
 
       <LoadMoreControls
         hasMore={page < totalPages}
@@ -291,7 +302,7 @@ export function App() {
         onEditingTagsChange={setEditingTags}
         onTagClick={handleTagClick}
       />
-    </main>
+    </Container>
   );
 }
 
