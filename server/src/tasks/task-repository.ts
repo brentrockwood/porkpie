@@ -35,6 +35,7 @@ export type TaskPatch = {
 
 export interface TaskRepository {
   list(userId: string, filters: TaskFilters): Promise<PagedTasks>;
+  listTags(userId: string): Promise<string[]>;
   findById(userId: string, id: string): Promise<Task | null>;
   create(task: NewTask): Promise<Task>;
   update(userId: string, id: string, patch: TaskPatch): Promise<Task | null>;
@@ -115,6 +116,19 @@ export class PostgresTaskRepository implements TaskRepository {
       pageSize: filters.pageSize,
       totalPages: Math.max(1, Math.ceil(total / filters.pageSize)),
     };
+  }
+
+  async listTags(userId: string): Promise<string[]> {
+    const result = await this.pool.query(
+      `SELECT DISTINCT tags.name
+       FROM tags
+       JOIN task_tags ON task_tags.tag_id = tags.id
+       JOIN tasks ON tasks.id = task_tags.task_id
+       WHERE tasks.user_id = $1
+       ORDER BY tags.name`,
+      [userId],
+    );
+    return result.rows.map((row) => String(row.name));
   }
 
   async findById(userId: string, id: string): Promise<Task | null> {

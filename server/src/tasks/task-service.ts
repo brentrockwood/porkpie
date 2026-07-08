@@ -12,6 +12,10 @@ export class TaskService {
     return this.repository.list(auth.userId, filters);
   }
 
+  listTags(auth: AuthContext): Promise<string[]> {
+    return this.repository.listTags(auth.userId);
+  }
+
   getTask(auth: AuthContext, id: string): Promise<Task | null> {
     return this.repository.findById(auth.userId, id);
   }

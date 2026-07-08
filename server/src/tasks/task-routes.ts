@@ -18,6 +18,14 @@ export function createTaskRouter(taskService: TaskService): Router {
     }),
   );
 
+  router.get(
+    "/tags",
+    asyncHandler(async (_request, response) => {
+      const tags = await taskService.listTags(demoAuthContext);
+      response.json({ tags });
+    }),
+  );
+
   router.post(
     "/",
     asyncHandler(async (request, response) => {

@@ -79,6 +79,9 @@ describe("task API", () => {
 
     const completedFiltered = await request(app).get("/api/tasks?completed=false").expect(200);
     expect(completedFiltered.body.tasks).toHaveLength(2);
+
+    const tags = await request(app).get("/api/tasks/tags").expect(200);
+    expect(tags.body).toEqual({ tags: ["errands", "shopping", "work"] });
   });
 
   it("paginates task lists with 20 items by default", async () => {

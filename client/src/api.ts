@@ -24,6 +24,12 @@ export async function listTasks(filters: TaskFilters = {}, signal?: AbortSignal)
   return (await response.json()) as TaskListResponse;
 }
 
+export async function listTags(): Promise<string[]> {
+  const response = await fetch(`${apiBaseUrl}/api/tasks/tags`);
+  await ensureOk(response);
+  return ((await response.json()) as { tags: string[] }).tags;
+}
+
 export async function createTask(input: CreateTaskRequest): Promise<Task> {
   const response = await fetch(`${apiBaseUrl}/api/tasks`, {
     method: "POST",

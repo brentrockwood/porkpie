@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 type TaskFiltersFormProps = {
   searchFilter: string;
   tagFilter: string;
+  availableTags: string[];
   showCompleted: boolean;
   onSearchFilterChange: (value: string) => void;
   onTagFilterChange: (value: string) => void;
@@ -12,6 +13,7 @@ type TaskFiltersFormProps = {
 export function TaskFiltersForm({
   searchFilter,
   tagFilter,
+  availableTags,
   showCompleted,
   onSearchFilterChange,
   onTagFilterChange,
@@ -44,7 +46,17 @@ export function TaskFiltersForm({
           </label>
           <label>
             Tag
-            <input value={tagFilter} onChange={(event) => onTagFilterChange(event.target.value)} placeholder="Filter by tag" />
+            <input
+              list="tag-filter-options"
+              value={tagFilter}
+              onChange={(event) => onTagFilterChange(event.target.value)}
+              placeholder="Filter by tag"
+            />
+            <datalist id="tag-filter-options">
+              {availableTags.map((tag) => (
+                <option key={tag} value={tag} />
+              ))}
+            </datalist>
           </label>
         </div>
       ) : null}

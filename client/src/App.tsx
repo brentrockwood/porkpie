@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import type { Task } from "@porkpie/shared";
-import { createTask, deleteTask, listTasks, updateTask } from "./api";
+import { createTask, deleteTask, listTags, listTasks, updateTask } from "./api";
 import { LoadMoreControls } from "./components/LoadMoreControls";
 import { TaskFiltersForm } from "./components/TaskFiltersForm";
 import { TaskForm } from "./components/TaskForm";
@@ -22,6 +22,7 @@ export function App() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [tagInput, setTagInput] = useState("");
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [searchFilter, setSearchFilter] = useState(initialUrlState.search);
   const [debouncedSearchFilter, setDebouncedSearchFilter] = useState(initialUrlState.search);
   const [tagFilter, setTagFilter] = useState(initialUrlState.tag);
@@ -37,6 +38,10 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const reloadRequestId = useRef(0);
   const lastUrl = useRef(window.location.pathname + window.location.search);
+
+  useEffect(() => {
+    void reloadTags();
+  }, []);
 
   useEffect(() => {
     function handlePopState() {
@@ -116,6 +121,14 @@ export function App() {
     }
   }
 
+  async function reloadTags() {
+    try {
+      setAvailableTags(await listTags());
+    } catch {
+      // Tag suggestions are optional; task loading should remain usable if this request fails.
+    }
+  }
+
   async function handleCreate(event: FormEvent) {
     event.preventDefault();
     setError(null);
@@ -124,6 +137,7 @@ export function App() {
       await createTask({ title, description, tags: parseTags(tagInput) });
       if (page === 1) await reloadTasks();
       else setPage(1);
+      await reloadTags();
       setTitle("");
       setDescription("");
       setTagInput("");
@@ -156,6 +170,7 @@ export function App() {
       clearEditing();
       if (page === 1) await reloadTasks();
       else setPage(1);
+      await reloadTags();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save task");
     }
@@ -171,6 +186,7 @@ export function App() {
       }
       if (page === 1) await reloadTasks();
       else setPage(1);
+      await reloadTags();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete task");
     }
@@ -240,6 +256,7 @@ export function App() {
       <TaskFiltersForm
         searchFilter={searchFilter}
         tagFilter={tagFilter}
+        availableTags={availableTags}
         showCompleted={showCompleted}
         onSearchFilterChange={handleSearchFilterChange}
         onTagFilterChange={handleTagFilterChange}
