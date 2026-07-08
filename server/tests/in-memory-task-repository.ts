@@ -1,12 +1,15 @@
 import type { Task } from "@porkpie/shared";
-import type { NewTask, TaskPatch, TaskRepository } from "../src/tasks/task-repository.js";
+import type { NewTask, TaskFilters, TaskPatch, TaskRepository } from "../src/tasks/task-repository.js";
 
 export class InMemoryTaskRepository implements TaskRepository {
   private readonly tasks = new Map<string, Task & { userId: string }>();
 
-  async list(userId: string): Promise<Task[]> {
+  async list(userId: string, filters: TaskFilters = {}): Promise<Task[]> {
     return [...this.tasks.values()]
       .filter((task) => task.userId === userId)
+      .filter((task) => filters.completed === undefined || task.completed === filters.completed)
+      .filter((task) => !filters.tag || task.tags.some((tag) => tag.name === filters.tag))
+      .filter((task) => !filters.search || matchesSearch(task, filters.search))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       .map(stripUserId);
   }
@@ -24,6 +27,7 @@ export class InMemoryTaskRepository implements TaskRepository {
       title: task.title,
       description: task.description,
       completed: false,
+      tags: task.tags.map((name) => ({ name, source: "manual" as const, confidence: null })),
       createdAt: now,
       updatedAt: now,
     };
@@ -38,6 +42,7 @@ export class InMemoryTaskRepository implements TaskRepository {
     const updated = {
       ...existing,
       ...patch,
+      tags: patch.tags === undefined ? existing.tags : patch.tags.map((name) => ({ name, source: "manual" as const, confidence: null })),
       updatedAt: new Date().toISOString(),
     };
     this.tasks.set(id, updated);
@@ -54,4 +59,9 @@ export class InMemoryTaskRepository implements TaskRepository {
 function stripUserId(task: Task & { userId: string }): Task {
   const { userId: _userId, ...rest } = task;
   return rest;
+}
+
+function matchesSearch(task: Task, search: string): boolean {
+  const normalized = search.toLowerCase();
+  return task.title.toLowerCase().includes(normalized) || (task.description?.toLowerCase().includes(normalized) ?? false);
 }

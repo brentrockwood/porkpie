@@ -78,6 +78,9 @@ Database-backed system tests run against PostgreSQL:
 
 ```sh
 docker compose up -d postgres
+set -a
+. server/.env
+set +a
 SYSTEM_DATABASE_URL="$DATABASE_URL" npm run test:system
 ```
 

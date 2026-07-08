@@ -31,6 +31,7 @@ describe("task API", () => {
       title: "Buy milk",
       description: "oat milk",
       completed: false,
+      tags: [],
     });
 
     const id = created.body.task.id;
@@ -48,6 +49,36 @@ describe("task API", () => {
 
     const empty = await request(app).get("/api/tasks").expect(200);
     expect(empty.body.tasks).toHaveLength(0);
+  });
+
+  it("supports tags, search, and filtering", async () => {
+    const app = testApp();
+
+    const shopping = await request(app)
+      .post("/api/tasks")
+      .send({ title: "Buy coffee", description: "Whole bean", tags: ["Shopping", "Errands"] })
+      .expect(201);
+
+    await request(app)
+      .post("/api/tasks")
+      .send({ title: "Write interview notes", tags: ["work"] })
+      .expect(201);
+
+    expect(shopping.body.task.tags).toEqual([
+      { name: "shopping", source: "manual", confidence: null },
+      { name: "errands", source: "manual", confidence: null },
+    ]);
+
+    const tagFiltered = await request(app).get("/api/tasks?tag=shopping").expect(200);
+    expect(tagFiltered.body.tasks).toHaveLength(1);
+    expect(tagFiltered.body.tasks[0].title).toBe("Buy coffee");
+
+    const searchFiltered = await request(app).get("/api/tasks?search=interview").expect(200);
+    expect(searchFiltered.body.tasks).toHaveLength(1);
+    expect(searchFiltered.body.tasks[0].title).toBe("Write interview notes");
+
+    const completedFiltered = await request(app).get("/api/tasks?completed=false").expect(200);
+    expect(completedFiltered.body.tasks).toHaveLength(2);
   });
 
   it("rejects blank task titles", async () => {

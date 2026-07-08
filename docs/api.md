@@ -24,6 +24,14 @@ Response:
 GET /api/tasks
 ```
 
+Optional query parameters:
+
+```text
+search=milk
+tag=shopping
+completed=true|false
+```
+
 ### Create task
 
 ```text
@@ -35,7 +43,8 @@ Body:
 ```json
 {
   "title": "Buy milk",
-  "description": "Optional details"
+  "description": "Optional details",
+  "tags": ["shopping", "grocery"]
 }
 ```
 
@@ -57,7 +66,8 @@ Body fields are optional:
 {
   "title": "Buy oat milk",
   "description": null,
-  "completed": true
+  "completed": true,
+  "tags": ["shopping"]
 }
 ```
 

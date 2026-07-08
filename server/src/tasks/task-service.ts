@@ -1,15 +1,15 @@
 import { randomUUID } from "node:crypto";
 import type { CreateTaskRequest, Task, UpdateTaskRequest } from "@porkpie/shared";
 import type { AuthContext } from "../auth/auth-context.js";
-import type { TaskRepository } from "./task-repository.js";
+import type { TaskFilters, TaskRepository } from "./task-repository.js";
 
 export class ValidationError extends Error {}
 
 export class TaskService {
   constructor(private readonly repository: TaskRepository) {}
 
-  listTasks(auth: AuthContext): Promise<Task[]> {
-    return this.repository.list(auth.userId);
+  listTasks(auth: AuthContext, filters: TaskFilters = {}): Promise<Task[]> {
+    return this.repository.list(auth.userId, filters);
   }
 
   getTask(auth: AuthContext, id: string): Promise<Task | null> {
@@ -24,6 +24,7 @@ export class TaskService {
       userId: auth.userId,
       title,
       description: normalizeDescription(input.description),
+      tags: normalizeTags(input.tags),
     });
   }
 
@@ -43,6 +44,10 @@ export class TaskService {
         throw new ValidationError("completed must be a boolean");
       }
       patch.completed = input.completed;
+    }
+
+    if (input.tags !== undefined) {
+      patch.tags = normalizeTags(input.tags);
     }
 
     return this.repository.update(auth.userId, id, patch);
@@ -75,4 +80,21 @@ function normalizeDescription(value: unknown): string | null {
 
   const description = value.trim();
   return description || null;
+}
+
+function normalizeTags(value: unknown): string[] {
+  if (value === undefined) return [];
+
+  if (!Array.isArray(value)) {
+    throw new ValidationError("tags must be an array");
+  }
+
+  const tags = value.map((tag) => {
+    if (typeof tag !== "string") {
+      throw new ValidationError("tags must contain strings");
+    }
+    return tag.trim().toLowerCase();
+  }).filter(Boolean);
+
+  return [...new Set(tags)];
 }

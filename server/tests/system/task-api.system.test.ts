@@ -16,11 +16,11 @@ describeSystem("task API system test", () => {
   beforeAll(async () => {
     await runMigrations(databaseUrl!);
     pool = createPool(databaseUrl!);
-    await pool.query("TRUNCATE tasks");
+    await pool.query("TRUNCATE tasks CASCADE");
   });
 
   afterAll(async () => {
-    await pool.query("TRUNCATE tasks");
+    await pool.query("TRUNCATE tasks CASCADE");
     await pool.end();
   });
 
@@ -72,6 +72,41 @@ describeSystem("task API system test", () => {
 
     const rowAfterDelete = await pool.query("SELECT id FROM tasks WHERE id = $1", [id]);
     expect(rowAfterDelete.rowCount).toBe(0);
+  });
+
+  it("persists tags and supports search/filtering", async () => {
+    const app = createApp(new TaskService(new PostgresTaskRepository(pool)));
+
+    const created = await request(app)
+      .post("/api/tasks")
+      .send({ title: "Buy coffee", description: "Whole bean", tags: ["Shopping", "Errands", "shopping"] })
+      .expect(201);
+
+    expect(created.body.task.tags).toEqual([
+      { name: "errands", source: "manual", confidence: null },
+      { name: "shopping", source: "manual", confidence: null },
+    ]);
+
+    await request(app).post("/api/tasks").send({ title: "Write interview notes", tags: ["work"] }).expect(201);
+
+    const tagFiltered = await request(app).get("/api/tasks?tag=shopping").expect(200);
+    expect(tagFiltered.body.tasks).toHaveLength(1);
+    expect(tagFiltered.body.tasks[0].title).toBe("Buy coffee");
+
+    const searchFiltered = await request(app).get("/api/tasks?search=interview").expect(200);
+    expect(searchFiltered.body.tasks).toHaveLength(1);
+    expect(searchFiltered.body.tasks[0].title).toBe("Write interview notes");
+
+    const literalWildcardSearch = await request(app).get("/api/tasks?search=%25").expect(200);
+    expect(literalWildcardSearch.body.tasks).toHaveLength(0);
+
+    await request(app).patch(`/api/tasks/${created.body.task.id}`).send({ tags: ["grocery"] }).expect(200);
+
+    const updatedTagFiltered = await request(app).get("/api/tasks?tag=grocery").expect(200);
+    expect(updatedTagFiltered.body.tasks).toHaveLength(1);
+    expect(updatedTagFiltered.body.tasks[0].tags).toEqual([
+      { name: "grocery", source: "manual", confidence: null },
+    ]);
   });
 
   it("updates only provided fields and can clear description", async () => {

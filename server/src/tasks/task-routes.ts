@@ -1,15 +1,17 @@
 import { Router } from "express";
 import { demoAuthContext } from "../auth/auth-context.js";
 import { asyncHandler } from "../http/async-handler.js";
+import { ValidationError } from "./task-service.js";
 import type { TaskService } from "./task-service.js";
+import type { TaskFilters } from "./task-repository.js";
 
 export function createTaskRouter(taskService: TaskService): Router {
   const router = Router();
 
   router.get(
     "/",
-    asyncHandler(async (_request, response) => {
-      const tasks = await taskService.listTasks(demoAuthContext);
+    asyncHandler(async (request, response) => {
+      const tasks = await taskService.listTasks(demoAuthContext, parseFilters(request.query));
       response.json({ tasks });
     }),
   );
@@ -59,4 +61,24 @@ export function createTaskRouter(taskService: TaskService): Router {
   );
 
   return router;
+}
+
+function parseFilters(query: Record<string, unknown>): TaskFilters {
+  const filters: TaskFilters = {};
+
+  if (query.completed !== undefined) {
+    if (query.completed === "true") filters.completed = true;
+    else if (query.completed === "false") filters.completed = false;
+    else throw new ValidationError("completed filter must be true or false");
+  }
+
+  if (typeof query.tag === "string" && query.tag.trim()) {
+    filters.tag = query.tag.trim().toLowerCase();
+  }
+
+  if (typeof query.search === "string" && query.search.trim()) {
+    filters.search = query.search.trim();
+  }
+
+  return filters;
 }

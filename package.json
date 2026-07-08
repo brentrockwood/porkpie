@@ -22,5 +22,8 @@
     "eslint": "10.6.0",
     "globals": "17.7.0",
     "typescript-eslint": "8.63.0"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-arm64-musl": "4.62.2"
   }
 }
