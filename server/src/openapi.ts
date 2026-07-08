@@ -25,6 +25,13 @@ export const openApiDocument = {
     "/api/tasks": {
       get: {
         summary: "List tasks",
+        parameters: [
+          { $ref: "#/components/parameters/SearchFilter" },
+          { $ref: "#/components/parameters/TagFilter" },
+          { $ref: "#/components/parameters/CompletedFilter" },
+          { $ref: "#/components/parameters/Page" },
+          { $ref: "#/components/parameters/PageSize" },
+        ],
         responses: {
           "200": {
             description: "Tasks for the current user",
@@ -117,6 +124,36 @@ export const openApiDocument = {
         required: true,
         schema: { type: "string", format: "uuid" },
       },
+      SearchFilter: {
+        name: "search",
+        in: "query",
+        required: false,
+        schema: { type: "string" },
+      },
+      TagFilter: {
+        name: "tag",
+        in: "query",
+        required: false,
+        schema: { type: "string" },
+      },
+      CompletedFilter: {
+        name: "completed",
+        in: "query",
+        required: false,
+        schema: { type: "boolean" },
+      },
+      Page: {
+        name: "page",
+        in: "query",
+        required: false,
+        schema: { type: "integer", minimum: 1, default: 1 },
+      },
+      PageSize: {
+        name: "pageSize",
+        in: "query",
+        required: false,
+        schema: { type: "integer", minimum: 1, default: 20 },
+      },
     },
     responses: {
       ValidationError: {
@@ -144,14 +181,24 @@ export const openApiDocument = {
           ok: { type: "boolean" },
         },
       },
+      TaskTag: {
+        type: "object",
+        required: ["name", "source", "confidence"],
+        properties: {
+          name: { type: "string" },
+          source: { type: "string", enum: ["manual", "ai"] },
+          confidence: { type: ["number", "null"], minimum: 0, maximum: 1 },
+        },
+      },
       Task: {
         type: "object",
-        required: ["id", "title", "description", "completed", "createdAt", "updatedAt"],
+        required: ["id", "title", "description", "completed", "tags", "createdAt", "updatedAt"],
         properties: {
           id: { type: "string", format: "uuid" },
           title: { type: "string", minLength: 1 },
           description: { type: ["string", "null"] },
           completed: { type: "boolean" },
+          tags: { type: "array", items: { $ref: "#/components/schemas/TaskTag" } },
           createdAt: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time" },
         },
@@ -162,6 +209,7 @@ export const openApiDocument = {
         properties: {
           title: { type: "string", minLength: 1 },
           description: { type: ["string", "null"] },
+          tags: { type: "array", items: { type: "string" } },
         },
       },
       UpdateTaskRequest: {
@@ -170,6 +218,7 @@ export const openApiDocument = {
           title: { type: "string", minLength: 1 },
           description: { type: ["string", "null"] },
           completed: { type: "boolean" },
+          tags: { type: "array", items: { type: "string" } },
         },
       },
       TaskResponse: {
@@ -181,12 +230,16 @@ export const openApiDocument = {
       },
       TaskListResponse: {
         type: "object",
-        required: ["tasks"],
+        required: ["tasks", "total", "page", "pageSize", "totalPages"],
         properties: {
           tasks: {
             type: "array",
             items: { $ref: "#/components/schemas/Task" },
           },
+          total: { type: "integer", minimum: 0 },
+          page: { type: "integer", minimum: 1 },
+          pageSize: { type: "integer", minimum: 1 },
+          totalPages: { type: "integer", minimum: 1 },
         },
       },
       ErrorResponse: {

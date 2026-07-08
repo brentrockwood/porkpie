@@ -13,8 +13,15 @@ export function loadConfig(): AppConfig {
     throw new Error("DATABASE_URL is required");
   }
 
+  const rawPort = process.env.PORT ?? "4000";
+  const port = Number(rawPort);
+
+  if (!Number.isInteger(port) || port <= 0) {
+    throw new Error(`Invalid PORT value: ${rawPort}`);
+  }
+
   return {
-    port: Number(process.env.PORT ?? 4000),
+    port,
     databaseUrl,
     clientOrigin: process.env.CLIENT_ORIGIN ?? "http://localhost:5173",
   };

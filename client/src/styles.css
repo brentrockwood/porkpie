@@ -10,6 +10,7 @@ body {
 
 button,
 input,
+select,
 textarea {
   font: inherit;
 }
@@ -23,8 +24,13 @@ button {
   padding: 0.65rem 0.9rem;
 }
 
-button:hover {
+button:hover:not(:disabled) {
   background: #374151;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .app-shell {
@@ -75,6 +81,7 @@ label {
 }
 
 input,
+select,
 textarea {
   border: 1px solid #cbd5e1;
   border-radius: 0.5rem;
@@ -85,12 +92,32 @@ textarea {
   min-height: 4rem;
 }
 
+.filters {
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 1rem;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 1rem;
+  padding: 1rem;
+}
+
 .error {
   color: #b91c1c;
 }
 
 .empty {
   color: #64748b;
+}
+
+.pagination {
+  align-items: center;
+  color: #64748b;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin: 1rem 0;
 }
 
 .task-list {
@@ -119,6 +146,28 @@ textarea {
 .completed {
   color: #64748b;
   text-decoration: line-through;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+}
+
+.tags button {
+  background: #ede9fe;
+  border-radius: 999px;
+  color: #5b21b6;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+}
+
+.tags button:hover {
+  background: #ddd6fe;
 }
 
 .edit-fields {

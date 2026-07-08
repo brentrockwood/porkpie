@@ -2,11 +2,26 @@ import type { CreateTaskRequest, Task, TaskListResponse, UpdateTaskRequest } fro
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000";
 
-export async function listTasks(): Promise<Task[]> {
-  const response = await fetch(`${apiBaseUrl}/api/tasks`);
+export type TaskFilters = {
+  search?: string;
+  tag?: string;
+  completed?: "all" | "complete" | "incomplete";
+  page?: number;
+};
+
+export async function listTasks(filters: TaskFilters = {}, signal?: AbortSignal): Promise<TaskListResponse> {
+  const params = new URLSearchParams();
+
+  if (filters.search) params.set("search", filters.search);
+  if (filters.tag) params.set("tag", filters.tag);
+  if (filters.completed === "complete") params.set("completed", "true");
+  if (filters.completed === "incomplete") params.set("completed", "false");
+  if (filters.page) params.set("page", String(filters.page));
+
+  const query = params.toString();
+  const response = await fetch(`${apiBaseUrl}/api/tasks${query ? `?${query}` : ""}`, { signal });
   await ensureOk(response);
-  const body = (await response.json()) as TaskListResponse;
-  return body.tasks;
+  return (await response.json()) as TaskListResponse;
 }
 
 export async function createTask(input: CreateTaskRequest): Promise<Task> {

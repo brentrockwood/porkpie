@@ -8,6 +8,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "migrate": "tsx src/db/migrate.ts",
+    "seed": "tsx src/db/seed.ts",
     "test": "vitest run --exclude tests/system/**",
     "test:system": "vitest run tests/system",
     "typecheck": "tsc -p tsconfig.json --noEmit"

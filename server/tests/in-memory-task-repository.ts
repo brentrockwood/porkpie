@@ -1,14 +1,26 @@
 import type { Task } from "@porkpie/shared";
-import type { NewTask, TaskPatch, TaskRepository } from "../src/tasks/task-repository.js";
+import type { NewTask, PagedTasks, TaskFilters, TaskPatch, TaskRepository } from "../src/tasks/task-repository.js";
 
 export class InMemoryTaskRepository implements TaskRepository {
   private readonly tasks = new Map<string, Task & { userId: string }>();
 
-  async list(userId: string): Promise<Task[]> {
-    return [...this.tasks.values()]
+  async list(userId: string, filters: TaskFilters): Promise<PagedTasks> {
+    const filtered = [...this.tasks.values()]
       .filter((task) => task.userId === userId)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .filter((task) => filters.completed === undefined || task.completed === filters.completed)
+      .filter((task) => !filters.tag || task.tags.some((tag) => tag.name === filters.tag))
+      .filter((task) => !filters.search || matchesSearch(task, filters.search))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id))
       .map(stripUserId);
+
+    const start = (filters.page - 1) * filters.pageSize;
+    return {
+      tasks: filtered.slice(start, start + filters.pageSize),
+      total: filtered.length,
+      page: filters.page,
+      pageSize: filters.pageSize,
+      totalPages: Math.max(1, Math.ceil(filtered.length / filters.pageSize)),
+    };
   }
 
   async findById(userId: string, id: string): Promise<Task | null> {
@@ -24,6 +36,7 @@ export class InMemoryTaskRepository implements TaskRepository {
       title: task.title,
       description: task.description,
       completed: false,
+      tags: task.tags.map((name) => ({ name, source: "manual" as const, confidence: null })),
       createdAt: now,
       updatedAt: now,
     };
@@ -37,7 +50,10 @@ export class InMemoryTaskRepository implements TaskRepository {
 
     const updated = {
       ...existing,
-      ...patch,
+      title: patch.title ?? existing.title,
+      description: patch.description !== undefined ? patch.description : existing.description,
+      completed: patch.completed ?? existing.completed,
+      tags: patch.tags === undefined ? existing.tags : patch.tags.map((name) => ({ name, source: "manual" as const, confidence: null })),
       updatedAt: new Date().toISOString(),
     };
     this.tasks.set(id, updated);
@@ -54,4 +70,9 @@ export class InMemoryTaskRepository implements TaskRepository {
 function stripUserId(task: Task & { userId: string }): Task {
   const { userId: _userId, ...rest } = task;
   return rest;
+}
+
+function matchesSearch(task: Task, search: string): boolean {
+  const normalized = search.toLowerCase();
+  return task.title.toLowerCase().includes(normalized) || (task.description?.toLowerCase().includes(normalized) ?? false);
 }

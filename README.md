@@ -48,6 +48,14 @@ npm run dev -w @porkpie/client
 
 Open <http://localhost:5173>.
 
+Seed 30 sample tasks for demo/list testing:
+
+```sh
+npm run seed
+```
+
+The seed command resets local task data before inserting the sample list.
+
 ## Docker Compose app stack
 
 You can also run the local stack with:
@@ -78,6 +86,9 @@ Database-backed system tests run against PostgreSQL:
 
 ```sh
 docker compose up -d postgres
+set -a
+. server/.env
+set +a
 SYSTEM_DATABASE_URL="$DATABASE_URL" npm run test:system
 ```
 
@@ -102,6 +113,7 @@ npm run lint
 npm run typecheck
 npm run build
 npm run migrate -w @porkpie/server
+npm run seed
 ```
 
 ## Phase 1 API

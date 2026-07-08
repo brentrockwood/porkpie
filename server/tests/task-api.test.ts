@@ -31,6 +31,7 @@ describe("task API", () => {
       title: "Buy milk",
       description: "oat milk",
       completed: false,
+      tags: [],
     });
 
     const id = created.body.task.id;
@@ -48,6 +49,57 @@ describe("task API", () => {
 
     const empty = await request(app).get("/api/tasks").expect(200);
     expect(empty.body.tasks).toHaveLength(0);
+  });
+
+  it("supports tags, search, and filtering", async () => {
+    const app = testApp();
+
+    const shopping = await request(app)
+      .post("/api/tasks")
+      .send({ title: "Buy coffee", description: "Whole bean", tags: ["Shopping", "Errands"] })
+      .expect(201);
+
+    await request(app)
+      .post("/api/tasks")
+      .send({ title: "Write interview notes", tags: ["work"] })
+      .expect(201);
+
+    expect(shopping.body.task.tags).toEqual([
+      { name: "shopping", source: "manual", confidence: null },
+      { name: "errands", source: "manual", confidence: null },
+    ]);
+
+    const tagFiltered = await request(app).get("/api/tasks?tag=shopping").expect(200);
+    expect(tagFiltered.body.tasks).toHaveLength(1);
+    expect(tagFiltered.body.tasks[0].title).toBe("Buy coffee");
+
+    const searchFiltered = await request(app).get("/api/tasks?search=interview").expect(200);
+    expect(searchFiltered.body.tasks).toHaveLength(1);
+    expect(searchFiltered.body.tasks[0].title).toBe("Write interview notes");
+
+    const completedFiltered = await request(app).get("/api/tasks?completed=false").expect(200);
+    expect(completedFiltered.body.tasks).toHaveLength(2);
+  });
+
+  it("paginates task lists with 20 items by default", async () => {
+    const app = testApp();
+
+    for (let index = 1; index <= 21; index += 1) {
+      await request(app).post("/api/tasks").send({ title: `Task ${index}` }).expect(201);
+    }
+
+    const firstPage = await request(app).get("/api/tasks").expect(200);
+    expect(firstPage.body.tasks).toHaveLength(20);
+    expect(firstPage.body).toMatchObject({
+      total: 21,
+      page: 1,
+      pageSize: 20,
+      totalPages: 2,
+    });
+
+    const secondPage = await request(app).get("/api/tasks?page=2").expect(200);
+    expect(secondPage.body.tasks).toHaveLength(1);
+    expect(secondPage.body.page).toBe(2);
   });
 
   it("rejects blank task titles", async () => {

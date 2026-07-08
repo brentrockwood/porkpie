@@ -1,6 +1,6 @@
 import type { Pool } from "pg";
 import request from "supertest";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../../src/app.js";
 import { createPool } from "../../src/db/pool.js";
 import { runMigrations } from "../../src/db/migrate.js";
@@ -16,11 +16,14 @@ describeSystem("task API system test", () => {
   beforeAll(async () => {
     await runMigrations(databaseUrl!);
     pool = createPool(databaseUrl!);
-    await pool.query("TRUNCATE tasks");
+  });
+
+  beforeEach(async () => {
+    await pool.query("TRUNCATE tasks CASCADE");
   });
 
   afterAll(async () => {
-    await pool.query("TRUNCATE tasks");
+    await pool.query("TRUNCATE tasks CASCADE");
     await pool.end();
   });
 
@@ -72,6 +75,61 @@ describeSystem("task API system test", () => {
 
     const rowAfterDelete = await pool.query("SELECT id FROM tasks WHERE id = $1", [id]);
     expect(rowAfterDelete.rowCount).toBe(0);
+  });
+
+  it("persists tags and supports search/filtering", async () => {
+    const app = createApp(new TaskService(new PostgresTaskRepository(pool)));
+
+    const created = await request(app)
+      .post("/api/tasks")
+      .send({ title: "Buy coffee", description: "Whole bean", tags: ["Shopping", "Errands", "shopping"] })
+      .expect(201);
+
+    expect(created.body.task.tags).toEqual([
+      { name: "errands", source: "manual", confidence: null },
+      { name: "shopping", source: "manual", confidence: null },
+    ]);
+
+    await request(app).post("/api/tasks").send({ title: "Write interview notes", tags: ["work"] }).expect(201);
+
+    const tagFiltered = await request(app).get("/api/tasks?tag=shopping").expect(200);
+    expect(tagFiltered.body.tasks).toHaveLength(1);
+    expect(tagFiltered.body.tasks[0].title).toBe("Buy coffee");
+
+    const searchFiltered = await request(app).get("/api/tasks?search=interview").expect(200);
+    expect(searchFiltered.body.tasks).toHaveLength(1);
+    expect(searchFiltered.body.tasks[0].title).toBe("Write interview notes");
+
+    const literalWildcardSearch = await request(app).get("/api/tasks?search=%25").expect(200);
+    expect(literalWildcardSearch.body.tasks).toHaveLength(0);
+
+    await request(app).patch(`/api/tasks/${created.body.task.id}`).send({ tags: ["grocery"] }).expect(200);
+
+    const updatedTagFiltered = await request(app).get("/api/tasks?tag=grocery").expect(200);
+    expect(updatedTagFiltered.body.tasks).toHaveLength(1);
+    expect(updatedTagFiltered.body.tasks[0].tags).toEqual([
+      { name: "grocery", source: "manual", confidence: null },
+    ]);
+  });
+
+  it("paginates task lists with metadata", async () => {
+    const app = createApp(new TaskService(new PostgresTaskRepository(pool)));
+
+    for (let index = 1; index <= 21; index += 1) {
+      await request(app).post("/api/tasks").send({ title: `Paged task ${index}` }).expect(201);
+    }
+
+    const firstPage = await request(app).get("/api/tasks").expect(200);
+    expect(firstPage.body.tasks).toHaveLength(20);
+    expect(firstPage.body).toMatchObject({
+      total: 21,
+      page: 1,
+      pageSize: 20,
+      totalPages: 2,
+    });
+
+    const secondPage = await request(app).get("/api/tasks?page=2").expect(200);
+    expect(secondPage.body.tasks).toHaveLength(1);
   });
 
   it("updates only provided fields and can clear description", async () => {
