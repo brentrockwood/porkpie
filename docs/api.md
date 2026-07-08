@@ -64,7 +64,7 @@ Body:
 }
 ```
 
-Created tasks may also include deterministic classifier tags with `source: "ai"` and a numeric `confidence`. User-supplied tags are always stored as `source: "manual"`; the classifier does not duplicate a manual tag with the same name.
+Created tasks may also include classifier tags with `source: "ai"` and a numeric `confidence`. User-supplied tags are always stored as `source: "manual"`; the classifier does not duplicate a manual tag with the same name. By default classification is deterministic; when Ollama is configured, model output is constrained with a JSON schema and validated before persistence.
 
 ### Get task
 

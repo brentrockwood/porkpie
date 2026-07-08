@@ -41,4 +41,17 @@ The task service depends on that context, not on a concrete OAuth/JWT/session pr
 
 ## AI seam
 
-AI classification is planned as a later service boundary, not mixed into CRUD handlers. The intended shape is a replaceable classifier interface with deterministic test implementations and optional real model-backed implementations.
+Task classification is a replaceable service boundary, not mixed into CRUD handlers. The default implementation is deterministic and heuristic-based so tests remain stable. When `OLLAMA_BASE_URL` and `OLLAMA_MODEL` are configured, the server uses Ollama for structured JSON-schema tag suggestions and falls back to the heuristic classifier if the model call fails or returns unusable tags.
+
+Current recommended local model:
+
+```text
+OLLAMA_BASE_URL=http://ai1.lab:11434
+OLLAMA_MODEL=qwen3:8b
+OLLAMA_TIMEOUT_MS=5000
+```
+
+Nice-to-have follow-ups:
+
+- Retry once when the model returns invalid schema output.
+- Encourage reuse of existing tags when the model wants a semantically similar new tag.
