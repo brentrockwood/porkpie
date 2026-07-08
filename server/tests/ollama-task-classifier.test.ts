@@ -38,7 +38,7 @@ describe("OllamaTaskClassifier", () => {
     const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)) as { format?: unknown; model?: unknown };
     expect(body.model).toBe("qwen3:8b");
     expect(body.format).toMatchObject({ required: ["tags"] });
-    expect(logger).toHaveBeenCalledWith({ classifier: "ollama", outcome: "success", tagCount: 1, model: "qwen3:8b" });
+    expect(logger).toHaveBeenCalledWith({ classifier: "ollama", outcome: "success", tagCount: 1, model: "qwen3:8b", attempts: 1 });
   });
 
   it("filters manual duplicates from valid model tags", async () => {
@@ -75,12 +75,35 @@ describe("OllamaTaskClassifier", () => {
     });
 
     await expect(classifier.classify({ title: "Task", description: null, manualTags: [] })).resolves.toEqual([]);
-    expect(logger).toHaveBeenCalledWith({ classifier: "ollama", outcome: "empty", tagCount: 0, model: "qwen3:8b" });
+    expect(logger).toHaveBeenCalledWith({ classifier: "ollama", outcome: "empty", tagCount: 0, model: "qwen3:8b", attempts: 1 });
   });
 
-  it("uses fallback tags when Ollama is unavailable or invalid", async () => {
+  it("retries once when Ollama returns invalid tags", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ response: JSON.stringify({ tags: [{ name: "two words", confidence: 0.8 }] }) }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ response: JSON.stringify({ tags: [{ name: "work", confidence: 0.85 }] }) }), { status: 200 }));
+    globalThis.fetch = fetchMock;
+
+    const logger = vi.fn();
+    const classifier = new OllamaTaskClassifier({
+      baseUrl: "http://ollama.example:11434",
+      model: "qwen3:8b",
+      fallback: fallback([]),
+      logger,
+    });
+
+    await expect(classifier.classify({ title: "Review architecture", description: null, manualTags: [] })).resolves.toEqual([
+      { name: "work", confidence: 0.85 },
+    ]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(logger).toHaveBeenCalledWith({ classifier: "ollama", outcome: "success", tagCount: 1, model: "qwen3:8b", attempts: 2 });
+  });
+
+  it("uses fallback tags after two invalid Ollama responses", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    globalThis.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ response: JSON.stringify({ tags: [{ name: "two words", confidence: 0.8 }] }) }), { status: 200 }));
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ response: JSON.stringify({ tags: [{ name: "two words", confidence: 0.8 }] }) }), { status: 200 })));
+    globalThis.fetch = fetchMock;
 
     const logger = vi.fn();
     const classifier = new OllamaTaskClassifier({
@@ -93,7 +116,28 @@ describe("OllamaTaskClassifier", () => {
     await expect(classifier.classify({ title: "Review architecture", description: null, manualTags: [] })).resolves.toEqual([
       { name: "work", confidence: 0.85 },
     ]);
-    expect(logger).toHaveBeenCalledWith({ classifier: "ollama", outcome: "fallback", tagCount: 1, model: "qwen3:8b", reason: "invalid_response" });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(logger).toHaveBeenCalledWith({ classifier: "ollama", outcome: "fallback", tagCount: 1, model: "qwen3:8b", reason: "invalid_response", attempts: 2 });
+  });
+
+  it("does not retry Ollama call errors", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const fetchMock = vi.fn().mockRejectedValue(new Error("offline"));
+    globalThis.fetch = fetchMock;
+
+    const logger = vi.fn();
+    const classifier = new OllamaTaskClassifier({
+      baseUrl: "http://ollama.example:11434",
+      model: "qwen3:8b",
+      fallback: fallback([{ name: "work", confidence: 0.85 }]),
+      logger,
+    });
+
+    await expect(classifier.classify({ title: "Review architecture", description: null, manualTags: [] })).resolves.toEqual([
+      { name: "work", confidence: 0.85 },
+    ]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(logger).toHaveBeenCalledWith({ classifier: "ollama", outcome: "fallback", tagCount: 1, model: "qwen3:8b", reason: "error", attempts: 1 });
   });
 });
 

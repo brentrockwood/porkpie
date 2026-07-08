@@ -15,6 +15,7 @@ export type ClassifierLogEvent = {
   tagCount: number;
   model?: string;
   reason?: "error" | "invalid_response";
+  attempts?: number;
 };
 
 export type ClassifierLogger = (event: ClassifierLogEvent) => void;

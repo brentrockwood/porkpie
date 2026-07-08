@@ -42,23 +42,32 @@ export class OllamaTaskClassifier implements TaskClassifier {
 
   async classify(input: ClassificationInput): Promise<ClassifiedTaskTag[]> {
     try {
-      const response = await this.callOllama(input);
-      const parsed = JSON.parse(response) as unknown;
-      const tags = parseTags(parsed, input.manualTags);
-      if (tags) {
-        this.config.logger?.({ classifier: "ollama", outcome: tags.length > 0 ? "success" : "empty", tagCount: tags.length, model: this.config.model });
-        return tags;
+      const firstAttempt = await this.classifyWithOllama(input);
+      if (firstAttempt) {
+        this.config.logger?.({ classifier: "ollama", outcome: firstAttempt.length > 0 ? "success" : "empty", tagCount: firstAttempt.length, model: this.config.model, attempts: 1 });
+        return firstAttempt;
+      }
+
+      const secondAttempt = await this.classifyWithOllama(input);
+      if (secondAttempt) {
+        this.config.logger?.({ classifier: "ollama", outcome: secondAttempt.length > 0 ? "success" : "empty", tagCount: secondAttempt.length, model: this.config.model, attempts: 2 });
+        return secondAttempt;
       }
 
       const fallbackTags = await this.config.fallback.classify(input);
-      this.config.logger?.({ classifier: "ollama", outcome: "fallback", tagCount: fallbackTags.length, model: this.config.model, reason: "invalid_response" });
+      this.config.logger?.({ classifier: "ollama", outcome: "fallback", tagCount: fallbackTags.length, model: this.config.model, reason: "invalid_response", attempts: 2 });
       return fallbackTags;
     } catch (error) {
       console.warn("Ollama task classification failed; using heuristic fallback", error);
       const fallbackTags = await this.config.fallback.classify(input);
-      this.config.logger?.({ classifier: "ollama", outcome: "fallback", tagCount: fallbackTags.length, model: this.config.model, reason: "error" });
+      this.config.logger?.({ classifier: "ollama", outcome: "fallback", tagCount: fallbackTags.length, model: this.config.model, reason: "error", attempts: 1 });
       return fallbackTags;
     }
+  }
+
+  private async classifyWithOllama(input: ClassificationInput): Promise<ClassifiedTaskTag[] | null> {
+    const response = await this.callOllama(input);
+    return parseTags(parseJson(response), input.manualTags);
   }
 
   private async callOllama(input: ClassificationInput): Promise<string> {
@@ -105,6 +114,14 @@ function buildPrompt(input: ClassificationInput): string {
     `Title: ${input.title}`,
     `Description: ${input.description ?? ""}`,
   ].join("\n");
+}
+
+function parseJson(value: string): unknown {
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return null;
+  }
 }
 
 function parseTags(value: unknown, manualTags: string[]): ClassifiedTaskTag[] | null {
