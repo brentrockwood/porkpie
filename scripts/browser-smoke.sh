@@ -5,8 +5,11 @@ APP_URL="${APP_URL:-http://localhost:5173}"
 API_URL="${API_URL:-http://localhost:4000}"
 TITLE="Browser smoke task $(date +%s)"
 DESCRIPTION="Created with agent-browser"
+BUTTON_UPDATED_TITLE="$TITLE button updated"
+BUTTON_UPDATED_DESCRIPTION="Updated with Save button"
+BUTTON_UPDATED_TAG="button-verified"
 UPDATED_TITLE="$TITLE updated"
-UPDATED_DESCRIPTION="Updated with agent-browser"
+UPDATED_DESCRIPTION="Updated with Enter key"
 TAG="smoke"
 UPDATED_TAG="verified"
 
@@ -61,12 +64,48 @@ if ! grep -F "$TITLE" <<<"$page_text" >/dev/null || ! grep -F "$TAG" <<<"$page_t
 fi
 
 agent-browser click ".task-card:first-of-type .task-actions button" >/dev/null
-agent-browser fill ".task-card:first-of-type .edit-fields input:first-of-type" "Cancel should not persist" >/dev/null
+agent-browser fill ".task-card:first-of-type .edit-fields input:first-of-type" "Cancel button should not persist" >/dev/null
+agent-browser click ".task-card:first-of-type .task-actions button:nth-of-type(2)" >/dev/null
+
+page_text="$(agent-browser get text body)"
+if grep -F "Cancel button should not persist" <<<"$page_text" >/dev/null || ! grep -F "$TITLE" <<<"$page_text" >/dev/null; then
+  echo "Browser smoke failed: Cancel button did not preserve original task" >&2
+  agent-browser snapshot -i >&2 || true
+  exit 1
+fi
+
+agent-browser click ".task-card:first-of-type .task-actions button" >/dev/null
+agent-browser fill ".task-card:first-of-type .edit-fields input:first-of-type" "Escape should not persist" >/dev/null
 agent-browser press Escape >/dev/null
 
 page_text="$(agent-browser get text body)"
-if grep -F "Cancel should not persist" <<<"$page_text" >/dev/null || ! grep -F "$TITLE" <<<"$page_text" >/dev/null; then
+if grep -F "Escape should not persist" <<<"$page_text" >/dev/null || ! grep -F "$TITLE" <<<"$page_text" >/dev/null; then
   echo "Browser smoke failed: Escape did not cancel edit and preserve original task" >&2
+  agent-browser snapshot -i >&2 || true
+  exit 1
+fi
+
+agent-browser click ".task-card:first-of-type .task-actions button" >/dev/null
+agent-browser fill ".task-card:first-of-type .edit-fields input:first-of-type" "$BUTTON_UPDATED_TITLE" >/dev/null
+agent-browser fill ".task-card:first-of-type .edit-fields textarea" "$BUTTON_UPDATED_DESCRIPTION" >/dev/null
+agent-browser fill ".task-card:first-of-type .edit-fields input[placeholder='Tags']" "$BUTTON_UPDATED_TAG" >/dev/null
+agent-browser click ".task-card:first-of-type .task-actions button" >/dev/null
+
+for _ in {1..20}; do
+  page_text="$(agent-browser get text body)"
+  if grep -F "$BUTTON_UPDATED_TITLE" <<<"$page_text" >/dev/null && \
+    grep -F "$BUTTON_UPDATED_DESCRIPTION" <<<"$page_text" >/dev/null && \
+    grep -F "$BUTTON_UPDATED_TAG" <<<"$page_text" >/dev/null; then
+    break
+  fi
+  sleep 1
+done
+
+page_text="$(agent-browser get text body)"
+if ! grep -F "$BUTTON_UPDATED_TITLE" <<<"$page_text" >/dev/null || \
+  ! grep -F "$BUTTON_UPDATED_DESCRIPTION" <<<"$page_text" >/dev/null || \
+  ! grep -F "$BUTTON_UPDATED_TAG" <<<"$page_text" >/dev/null; then
+  echo "Browser smoke failed: Save button did not persist edited title/details/tag" >&2
   agent-browser snapshot -i >&2 || true
   exit 1
 fi
