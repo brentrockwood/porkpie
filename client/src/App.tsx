@@ -8,39 +8,89 @@ import { TaskForm } from "./components/TaskForm";
 import { TaskList } from "./components/TaskList";
 import "./styles.css";
 
+type UrlState = {
+  search: string;
+  tag: string;
+  completed: TaskFilters["completed"];
+  page: number;
+  editingId: string | null;
+};
+
+const initialUrlState = readUrlState();
+
 export function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [tagInput, setTagInput] = useState("");
-  const [searchFilter, setSearchFilter] = useState("");
-  const [debouncedSearchFilter, setDebouncedSearchFilter] = useState("");
-  const [tagFilter, setTagFilter] = useState("");
-  const [completionFilter, setCompletionFilter] = useState<TaskFilters["completed"]>("all");
-  const [page, setPage] = useState(1);
+  const [searchFilter, setSearchFilter] = useState(initialUrlState.search);
+  const [debouncedSearchFilter, setDebouncedSearchFilter] = useState(initialUrlState.search);
+  const [tagFilter, setTagFilter] = useState(initialUrlState.tag);
+  const [completionFilter, setCompletionFilter] = useState<TaskFilters["completed"]>(initialUrlState.completed);
+  const [page, setPage] = useState(initialUrlState.page);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [pendingEditingId, setPendingEditingId] = useState<string | null>(initialUrlState.editingId);
   const [editingTitle, setEditingTitle] = useState("");
   const [editingDescription, setEditingDescription] = useState("");
   const [editingTags, setEditingTags] = useState("");
   const [error, setError] = useState<string | null>(null);
   const reloadRequestId = useRef(0);
+  const lastUrl = useRef(window.location.pathname + window.location.search);
 
   useEffect(() => {
+    function handlePopState() {
+      const urlState = readUrlState();
+      lastUrl.current = window.location.pathname + window.location.search;
+      setSearchFilter(urlState.search);
+      setDebouncedSearchFilter(urlState.search);
+      setTagFilter(urlState.tag);
+      setCompletionFilter(urlState.completed);
+      setPage(urlState.page);
+      setPendingEditingId(urlState.editingId);
+      if (urlState.editingId !== editingId) {
+        setEditingId(null);
+        setEditingTitle("");
+        setEditingDescription("");
+        setEditingTags("");
+      }
+    }
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [editingId]);
+
+  useEffect(() => {
+    if (searchFilter === debouncedSearchFilter) return;
+
     const timeout = window.setTimeout(() => {
       setDebouncedSearchFilter(searchFilter);
       setPage(1);
     }, 300);
 
     return () => window.clearTimeout(timeout);
-  }, [searchFilter]);
+  }, [debouncedSearchFilter, searchFilter]);
+
+  useEffect(() => {
+    syncUrl({ search: debouncedSearchFilter, tag: tagFilter, completed: completionFilter, page, editingId }, lastUrl);
+  }, [debouncedSearchFilter, editingId, completionFilter, page, tagFilter]);
 
   useEffect(() => {
     const controller = new AbortController();
     void reloadTasks(controller.signal);
     return () => controller.abort();
   }, [debouncedSearchFilter, tagFilter, completionFilter, page]);
+
+  useEffect(() => {
+    if (!pendingEditingId || editingId === pendingEditingId) return;
+
+    const task = tasks.find((item) => item.id === pendingEditingId);
+    if (task) {
+      openEditing(task);
+      setPendingEditingId(null);
+    }
+  }, [editingId, pendingEditingId, tasks]);
 
   async function reloadTasks(signal?: AbortSignal) {
     const requestId = reloadRequestId.current + 1;
@@ -102,7 +152,7 @@ export function App() {
         description: editingDescription,
         tags: parseTags(editingTags),
       });
-      setEditingId(null);
+      clearEditing();
       await reloadTasks();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save task");
@@ -114,6 +164,9 @@ export function App() {
 
     try {
       await deleteTask(task.id);
+      if (editingId === task.id) {
+        clearEditing();
+      }
       if (tasks.length === 1 && page > 1) {
         setPage((current) => current - 1);
         return;
@@ -144,6 +197,11 @@ export function App() {
   }
 
   function startEditing(task: Task) {
+    openEditing(task);
+    setPendingEditingId(null);
+  }
+
+  function openEditing(task: Task) {
     setEditingId(task.id);
     setEditingTitle(task.title);
     setEditingDescription(task.description ?? "");
@@ -151,7 +209,12 @@ export function App() {
   }
 
   function cancelEditing() {
+    clearEditing();
+  }
+
+  function clearEditing() {
     setEditingId(null);
+    setPendingEditingId(null);
     setEditingTitle("");
     setEditingDescription("");
     setEditingTags("");
@@ -218,4 +281,44 @@ export function App() {
 
 function parseTags(value: string): string[] {
   return [...new Set(value.split(",").map((tag) => tag.trim().toLowerCase()).filter(Boolean))];
+}
+
+function readUrlState(): UrlState {
+  const params = new URLSearchParams(window.location.search);
+  const page = Number(params.get("page") ?? "1");
+  const completed = parseCompletionFilter(params.get("status"));
+  const editingId = window.location.pathname.split("/").filter(Boolean)[0] ?? null;
+
+  return {
+    search: params.get("search") ?? "",
+    tag: params.get("tag") ?? "",
+    completed,
+    page: Number.isInteger(page) && page > 0 ? page : 1,
+    editingId: editingId ? decodeURIComponent(editingId) : null,
+  };
+}
+
+function parseCompletionFilter(value: string | null): TaskFilters["completed"] {
+  if (value === "complete" || value === "incomplete") return value;
+  return "all";
+}
+
+function syncUrl(state: UrlState, lastUrl: { current: string }): void {
+  const nextUrl = buildUrl(state);
+  if (nextUrl === lastUrl.current) return;
+
+  window.history.pushState(null, "", nextUrl);
+  lastUrl.current = nextUrl;
+}
+
+function buildUrl({ search, tag, completed, page, editingId }: UrlState): string {
+  const params = new URLSearchParams();
+  if (search) params.set("search", search);
+  if (tag) params.set("tag", tag);
+  if (completed && completed !== "all") params.set("status", completed);
+  if (page > 1) params.set("page", String(page));
+
+  const path = editingId ? `/${encodeURIComponent(editingId)}` : "/";
+  const query = params.toString();
+  return query ? `${path}?${query}` : path;
 }

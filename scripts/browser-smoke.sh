@@ -64,8 +64,21 @@ if ! grep -F "$TITLE" <<<"$page_text" >/dev/null || ! grep -F "$TAG" <<<"$page_t
 fi
 
 agent-browser click ".task-card:first-of-type .task-actions button" >/dev/null
+if agent-browser eval "location.pathname !== '/'" | grep -F "true" >/dev/null; then
+  :
+else
+  echo "Browser smoke failed: edit form did not update URL path" >&2
+  agent-browser snapshot -i >&2 || true
+  exit 1
+fi
 agent-browser fill ".task-card:first-of-type .edit-fields input:first-of-type" "Cancel button should not persist" >/dev/null
 agent-browser click ".task-card:first-of-type .task-actions button:nth-of-type(2)" >/dev/null
+
+if ! agent-browser eval "location.pathname === '/'" | grep -F "true" >/dev/null; then
+  echo "Browser smoke failed: Cancel button did not clear edit URL path" >&2
+  agent-browser snapshot -i >&2 || true
+  exit 1
+fi
 
 page_text="$(agent-browser get text body)"
 if grep -F "Cancel button should not persist" <<<"$page_text" >/dev/null || ! grep -F "$TITLE" <<<"$page_text" >/dev/null; then
@@ -122,7 +135,13 @@ for _ in {1..20}; do
     grep -F "$UPDATED_DESCRIPTION" <<<"$page_text" >/dev/null && \
     grep -F "$UPDATED_TAG" <<<"$page_text" >/dev/null; then
     agent-browser click ".task-card:first-of-type .tags button" >/dev/null
-    if agent-browser eval "document.querySelector('input[placeholder=\\'Filter by tag\\']')?.value" | grep -F "$UPDATED_TAG" >/dev/null; then
+    agent-browser fill "input[placeholder='Search tasks']" "$UPDATED_TITLE" >/dev/null
+    agent-browser select "select" "incomplete" >/dev/null
+    sleep 1
+    if agent-browser eval "document.querySelector('input[placeholder=\\'Filter by tag\\']')?.value" | grep -F "$UPDATED_TAG" >/dev/null && \
+      agent-browser eval "new URLSearchParams(location.search).get('tag')" | grep -F "$UPDATED_TAG" >/dev/null && \
+      agent-browser eval "new URLSearchParams(location.search).get('search')" | grep -F "$UPDATED_TITLE" >/dev/null && \
+      agent-browser eval "new URLSearchParams(location.search).get('status')" | grep -F "incomplete" >/dev/null; then
       echo "Browser smoke passed: $UPDATED_TITLE"
       exit 0
     fi
