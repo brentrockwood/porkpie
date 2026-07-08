@@ -170,6 +170,10 @@ textarea {
   background: #ddd6fe;
 }
 
+.task-edit-form {
+  display: contents;
+}
+
 .edit-fields {
   display: grid;
   gap: 0.5rem;

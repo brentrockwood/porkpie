@@ -34,7 +34,7 @@ page=1
 pageSize=20
 ```
 
-List responses include `tasks`, `total`, `page`, `pageSize`, and `totalPages`. The default page size is 20.
+List responses include `tasks`, `total`, `page`, `pageSize`, and `totalPages`. The default page size is 20, and custom page sizes are capped at 100.
 
 ### Create task
 

@@ -68,7 +68,7 @@ The API will be available at <http://localhost:4000> and the client at <http://l
 
 API documentation is available at <http://localhost:4000/docs>, with the raw OpenAPI contract at <http://localhost:4000/openapi.json>.
 
-The compose stack uses a small local Node development image with current npm and a Chainguard Postgres image to keep fixable high/critical container vulnerabilities out of the demo runtime. If switching from the earlier Postgres 16 image, reset the local database volume once:
+The compose stack uses a small local Node development image with current npm and a Chainguard Postgres image to keep fixable high/critical container vulnerabilities out of the demo runtime. If switching from the earlier Postgres 16 image, reset the local database volume once. Warning: this deletes the local database volume and all data in it.
 
 ```sh
 docker compose down -v

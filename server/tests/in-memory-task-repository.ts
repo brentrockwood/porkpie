@@ -36,7 +36,7 @@ export class InMemoryTaskRepository implements TaskRepository {
       title: task.title,
       description: task.description,
       completed: false,
-      tags: task.tags.map((name) => ({ name, source: "manual" as const, confidence: null })),
+      tags: normalizeTags(task.tags),
       createdAt: now,
       updatedAt: now,
     };
@@ -53,7 +53,7 @@ export class InMemoryTaskRepository implements TaskRepository {
       title: patch.title ?? existing.title,
       description: patch.description !== undefined ? patch.description : existing.description,
       completed: patch.completed ?? existing.completed,
-      tags: patch.tags === undefined ? existing.tags : patch.tags.map((name) => ({ name, source: "manual" as const, confidence: null })),
+      tags: patch.tags === undefined ? existing.tags : normalizeTags(patch.tags),
       updatedAt: new Date().toISOString(),
     };
     this.tasks.set(id, updated);
@@ -70,6 +70,10 @@ export class InMemoryTaskRepository implements TaskRepository {
 function stripUserId(task: Task & { userId: string }): Task {
   const { userId: _userId, ...rest } = task;
   return rest;
+}
+
+function normalizeTags(names: string[]): Task["tags"] {
+  return [...new Set(names)].sort().map((name) => ({ name, source: "manual" as const, confidence: null }));
 }
 
 function matchesSearch(task: Task, search: string): boolean {

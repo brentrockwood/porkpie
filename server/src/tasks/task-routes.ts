@@ -5,6 +5,8 @@ import { ValidationError } from "./task-service.js";
 import type { TaskService } from "./task-service.js";
 import type { TaskFilters } from "./task-repository.js";
 
+const MAX_PAGE_SIZE = 100;
+
 export function createTaskRouter(taskService: TaskService): Router {
   const router = Router();
 
@@ -85,7 +87,7 @@ function parseFilters(query: Record<string, unknown>): TaskFilters {
   }
 
   if (query.pageSize !== undefined) {
-    filters.pageSize = parsePositiveInteger(query.pageSize, "pageSize");
+    filters.pageSize = parseBoundedPageSize(query.pageSize);
   }
 
   return filters;
@@ -95,6 +97,14 @@ function parsePositiveInteger(value: unknown, name: string): number {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 1) {
     throw new ValidationError(`${name} must be a positive integer`);
+  }
+  return parsed;
+}
+
+function parseBoundedPageSize(value: unknown): number {
+  const parsed = parsePositiveInteger(value, "pageSize");
+  if (parsed > MAX_PAGE_SIZE) {
+    throw new ValidationError(`pageSize must be at most ${MAX_PAGE_SIZE}`);
   }
   return parsed;
 }

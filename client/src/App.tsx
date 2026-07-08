@@ -1,35 +1,80 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import type { Task } from "@porkpie/shared";
 import { createTask, deleteTask, listTasks, updateTask } from "./api";
 import type { TaskFilters } from "./api";
+import { PaginationControls } from "./components/PaginationControls";
+import { TaskFiltersForm } from "./components/TaskFiltersForm";
+import { TaskForm } from "./components/TaskForm";
+import { TaskList } from "./components/TaskList";
 import "./styles.css";
+
+type UrlState = {
+  search: string;
+  tag: string;
+  completed: TaskFilters["completed"];
+  page: number;
+  editingId: string | null;
+};
+
+const initialUrlState = readUrlState();
 
 export function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [tagInput, setTagInput] = useState("");
-  const [searchFilter, setSearchFilter] = useState("");
-  const [debouncedSearchFilter, setDebouncedSearchFilter] = useState("");
-  const [tagFilter, setTagFilter] = useState("");
-  const [completionFilter, setCompletionFilter] = useState<TaskFilters["completed"]>("all");
-  const [page, setPage] = useState(1);
+  const [searchFilter, setSearchFilter] = useState(initialUrlState.search);
+  const [debouncedSearchFilter, setDebouncedSearchFilter] = useState(initialUrlState.search);
+  const [tagFilter, setTagFilter] = useState(initialUrlState.tag);
+  const [completionFilter, setCompletionFilter] = useState<TaskFilters["completed"]>(initialUrlState.completed);
+  const [page, setPage] = useState(initialUrlState.page);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [pendingEditingId, setPendingEditingId] = useState<string | null>(initialUrlState.editingId);
   const [editingTitle, setEditingTitle] = useState("");
   const [editingDescription, setEditingDescription] = useState("");
   const [editingTags, setEditingTags] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const reloadRequestId = useRef(0);
+  const lastUrl = useRef(window.location.pathname + window.location.search);
 
   useEffect(() => {
+    function handlePopState() {
+      const urlState = readUrlState();
+      lastUrl.current = window.location.pathname + window.location.search;
+      setSearchFilter(urlState.search);
+      setDebouncedSearchFilter(urlState.search);
+      setTagFilter(urlState.tag);
+      setCompletionFilter(urlState.completed);
+      setPage(urlState.page);
+      setPendingEditingId(urlState.editingId);
+      if (urlState.editingId !== editingId) {
+        setEditingId(null);
+        setEditingTitle("");
+        setEditingDescription("");
+        setEditingTags("");
+      }
+    }
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [editingId]);
+
+  useEffect(() => {
+    if (searchFilter === debouncedSearchFilter) return;
+
     const timeout = window.setTimeout(() => {
       setDebouncedSearchFilter(searchFilter);
       setPage(1);
     }, 300);
 
     return () => window.clearTimeout(timeout);
-  }, [searchFilter]);
+  }, [debouncedSearchFilter, searchFilter]);
+
+  useEffect(() => {
+    syncUrl({ search: debouncedSearchFilter, tag: tagFilter, completed: completionFilter, page, editingId }, lastUrl);
+  }, [debouncedSearchFilter, editingId, completionFilter, page, tagFilter]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -37,15 +82,32 @@ export function App() {
     return () => controller.abort();
   }, [debouncedSearchFilter, tagFilter, completionFilter, page]);
 
+  useEffect(() => {
+    if (!pendingEditingId || editingId === pendingEditingId) return;
+
+    const task = tasks.find((item) => item.id === pendingEditingId);
+    if (task) {
+      openEditing(task);
+      setPendingEditingId(null);
+    }
+  }, [editingId, pendingEditingId, tasks]);
+
   async function reloadTasks(signal?: AbortSignal) {
+    const requestId = reloadRequestId.current + 1;
+    reloadRequestId.current = requestId;
+
     try {
       setError(null);
-      const loaded = await listTasks({
-        search: debouncedSearchFilter,
-        tag: tagFilter,
-        completed: completionFilter,
-        page,
-      }, signal);
+      const loaded = await listTasks(
+        {
+          search: debouncedSearchFilter,
+          tag: tagFilter,
+          completed: completionFilter,
+          page,
+        },
+        signal,
+      );
+      if (requestId !== reloadRequestId.current) return;
       setTasks(loaded.tasks);
       setTotal(loaded.total);
       setTotalPages(loaded.totalPages);
@@ -90,7 +152,7 @@ export function App() {
         description: editingDescription,
         tags: parseTags(editingTags),
       });
-      setEditingId(null);
+      clearEditing();
       await reloadTasks();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save task");
@@ -102,13 +164,44 @@ export function App() {
 
     try {
       await deleteTask(task.id);
+      if (editingId === task.id) {
+        clearEditing();
+      }
+      if (tasks.length === 1 && page > 1) {
+        setPage((current) => current - 1);
+        return;
+      }
       await reloadTasks();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete task");
     }
   }
 
+  function handleSearchFilterChange(value: string) {
+    setSearchFilter(value);
+  }
+
+  function handleTagFilterChange(value: string) {
+    setTagFilter(value);
+    setPage(1);
+  }
+
+  function handleCompletionFilterChange(value: TaskFilters["completed"]) {
+    setCompletionFilter(value);
+    setPage(1);
+  }
+
+  function handleTagClick(tagName: string) {
+    setTagFilter(tagName);
+    setPage(1);
+  }
+
   function startEditing(task: Task) {
+    openEditing(task);
+    setPendingEditingId(null);
+  }
+
+  function openEditing(task: Task) {
     setEditingId(task.id);
     setEditingTitle(task.title);
     setEditingDescription(task.description ?? "");
@@ -116,7 +209,12 @@ export function App() {
   }
 
   function cancelEditing() {
+    clearEditing();
+  }
+
+  function clearEditing() {
     setEditingId(null);
+    setPendingEditingId(null);
     setEditingTitle("");
     setEditingDescription("");
     setEditingTags("");
@@ -130,155 +228,97 @@ export function App() {
         <p className="lede">A small TypeScript task app built to show clean end-to-end architecture.</p>
       </header>
 
-      <form className="task-form" onSubmit={handleCreate}>
-        <label>
-          Title
-          <input autoFocus value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Buy milk" />
-        </label>
-        <label>
-          Description
-          <textarea
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            placeholder="Optional details"
-          />
-        </label>
-        <label>
-          Tags
-          <input value={tagInput} onChange={(event) => setTagInput(event.target.value)} placeholder="shopping, grocery" />
-        </label>
-        <button type="submit">Create task</button>
-      </form>
+      <TaskForm
+        title={title}
+        description={description}
+        tagInput={tagInput}
+        onTitleChange={setTitle}
+        onDescriptionChange={setDescription}
+        onTagInputChange={setTagInput}
+        onSubmit={handleCreate}
+      />
 
-      <section className="filters" aria-label="Task filters">
-        <label>
-          Search
-          <input
-            value={searchFilter}
-            onChange={(event) => {
-              setSearchFilter(event.target.value);
-              setPage(1);
-            }}
-            placeholder="Search tasks"
-          />
-        </label>
-        <label>
-          Tag
-          <input
-            value={tagFilter}
-            onChange={(event) => {
-              setTagFilter(event.target.value);
-              setPage(1);
-            }}
-            placeholder="Filter by tag"
-          />
-        </label>
-        <label>
-          Status
-          <select
-            value={completionFilter}
-            onChange={(event) => {
-              setCompletionFilter(event.target.value as TaskFilters["completed"]);
-              setPage(1);
-            }}
-          >
-            <option value="all">All</option>
-            <option value="incomplete">Incomplete</option>
-            <option value="complete">Complete</option>
-          </select>
-        </label>
-      </section>
+      <TaskFiltersForm
+        searchFilter={searchFilter}
+        tagFilter={tagFilter}
+        completionFilter={completionFilter}
+        onSearchFilterChange={handleSearchFilterChange}
+        onTagFilterChange={handleTagFilterChange}
+        onCompletionFilterChange={handleCompletionFilterChange}
+      />
 
       {error ? <p className="error">{error}</p> : null}
 
-      <nav className="pagination" aria-label="Task pages">
-        <button type="button" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
-          Previous
-        </button>
-        <span>
-          Page {page} of {totalPages} · {total} tasks
-        </span>
-        <button type="button" disabled={page >= totalPages} onClick={() => setPage((current) => current + 1)}>
-          Next
-        </button>
-      </nav>
+      <PaginationControls
+        page={page}
+        total={total}
+        totalPages={totalPages}
+        onPreviousPage={() => setPage((current) => Math.max(1, current - 1))}
+        onNextPage={() => setPage((current) => current + 1)}
+      />
 
-      <section className="task-list" aria-label="Tasks">
-        {tasks.length === 0 ? (
-          <p className="empty">
-            {debouncedSearchFilter || tagFilter || completionFilter !== "all" ? "No tasks match the current filters." : "No tasks yet."}
-          </p>
-        ) : null}
-        {tasks.map((task) => (
-          <article className="task-card" key={task.id}>
-            <input
-              aria-label={`Mark ${task.title} ${task.completed ? "incomplete" : "complete"}`}
-              checked={task.completed}
-              onChange={() => void handleToggle(task)}
-              type="checkbox"
-            />
-            <div className="task-content">
-              {editingId === task.id ? (
-                <div className="edit-fields">
-                  <input aria-label="Task title" value={editingTitle} onChange={(event) => setEditingTitle(event.target.value)} />
-                  <textarea
-                    aria-label="Task description"
-                    value={editingDescription}
-                    onChange={(event) => setEditingDescription(event.target.value)}
-                    placeholder="Optional details"
-                  />
-                  <input aria-label="Task tags" value={editingTags} onChange={(event) => setEditingTags(event.target.value)} placeholder="Tags" />
-                </div>
-              ) : (
-                <>
-                  <h2 className={task.completed ? "completed" : ""}>{task.title}</h2>
-                  {task.description ? <p>{task.description}</p> : null}
-                  {task.tags.length > 0 ? (
-                    <ul className="tags" aria-label={`Tags for ${task.title}`}>
-                      {task.tags.map((tag) => (
-                        <li key={`${tag.source}:${tag.name}`}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setTagFilter(tag.name);
-                              setPage(1);
-                            }}
-                          >
-                            {tag.name}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </>
-              )}
-            </div>
-            <div className="task-actions">
-              {editingId === task.id ? (
-                <>
-                  <button type="button" onClick={() => void handleSave(task)}>
-                    Save
-                  </button>
-                  <button type="button" onClick={cancelEditing}>
-                    Cancel
-                  </button>
-                </>
-              ) : (
-                <button type="button" onClick={() => startEditing(task)}>
-                  Edit
-                </button>
-              )}
-              <button type="button" onClick={() => void handleDelete(task)}>
-                Delete
-              </button>
-            </div>
-          </article>
-        ))}
-      </section>
+      <TaskList
+        tasks={tasks}
+        hasActiveFilters={Boolean(debouncedSearchFilter || tagFilter)}
+        completionFilter={completionFilter}
+        editingId={editingId}
+        editingTitle={editingTitle}
+        editingDescription={editingDescription}
+        editingTags={editingTags}
+        onToggle={(task) => void handleToggle(task)}
+        onStartEditing={startEditing}
+        onSave={(task) => void handleSave(task)}
+        onCancelEditing={cancelEditing}
+        onDelete={(task) => void handleDelete(task)}
+        onEditingTitleChange={setEditingTitle}
+        onEditingDescriptionChange={setEditingDescription}
+        onEditingTagsChange={setEditingTags}
+        onTagClick={handleTagClick}
+      />
     </main>
   );
 }
 
 function parseTags(value: string): string[] {
   return [...new Set(value.split(",").map((tag) => tag.trim().toLowerCase()).filter(Boolean))];
+}
+
+function readUrlState(): UrlState {
+  const params = new URLSearchParams(window.location.search);
+  const page = Number(params.get("page") ?? "1");
+  const completed = parseCompletionFilter(params.get("status"));
+  const editingId = window.location.pathname.split("/").filter(Boolean)[0] ?? null;
+
+  return {
+    search: params.get("search") ?? "",
+    tag: params.get("tag") ?? "",
+    completed,
+    page: Number.isInteger(page) && page > 0 ? page : 1,
+    editingId: editingId ? decodeURIComponent(editingId) : null,
+  };
+}
+
+function parseCompletionFilter(value: string | null): TaskFilters["completed"] {
+  if (value === "complete" || value === "incomplete") return value;
+  return "all";
+}
+
+function syncUrl(state: UrlState, lastUrl: { current: string }): void {
+  const nextUrl = buildUrl(state);
+  if (nextUrl === lastUrl.current) return;
+
+  window.history.pushState(null, "", nextUrl);
+  lastUrl.current = nextUrl;
+}
+
+function buildUrl({ search, tag, completed, page, editingId }: UrlState): string {
+  const params = new URLSearchParams();
+  if (search) params.set("search", search);
+  if (tag) params.set("tag", tag);
+  if (completed && completed !== "all") params.set("status", completed);
+  if (page > 1) params.set("page", String(page));
+
+  const path = editingId ? `/${encodeURIComponent(editingId)}` : "/";
+  const query = params.toString();
+  return query ? `${path}?${query}` : path;
 }

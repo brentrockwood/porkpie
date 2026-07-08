@@ -65,8 +65,8 @@ describe("task API", () => {
       .expect(201);
 
     expect(shopping.body.task.tags).toEqual([
-      { name: "shopping", source: "manual", confidence: null },
       { name: "errands", source: "manual", confidence: null },
+      { name: "shopping", source: "manual", confidence: null },
     ]);
 
     const tagFiltered = await request(app).get("/api/tasks?tag=shopping").expect(200);
@@ -100,6 +100,14 @@ describe("task API", () => {
     const secondPage = await request(app).get("/api/tasks?page=2").expect(200);
     expect(secondPage.body.tasks).toHaveLength(1);
     expect(secondPage.body.page).toBe(2);
+  });
+
+  it("rejects oversized page sizes", async () => {
+    const app = testApp();
+
+    const response = await request(app).get("/api/tasks?pageSize=101").expect(400);
+
+    expect(response.body).toEqual({ error: "pageSize must be at most 100" });
   });
 
   it("rejects blank task titles", async () => {
