@@ -10,7 +10,7 @@ export type ClassifiedTaskTag = {
 };
 
 export interface TaskClassifier {
-  classify(input: ClassificationInput): ClassifiedTaskTag[];
+  classify(input: ClassificationInput): Promise<ClassifiedTaskTag[]>;
 }
 
 type Rule = {
@@ -27,7 +27,7 @@ const RULES: Rule[] = [
 ];
 
 export class HeuristicTaskClassifier implements TaskClassifier {
-  classify(input: ClassificationInput): ClassifiedTaskTag[] {
+  async classify(input: ClassificationInput): Promise<ClassifiedTaskTag[]> {
     const text = `${input.title} ${input.description ?? ""}`.toLowerCase();
     const manualTags = new Set(input.manualTags);
 

@@ -24,7 +24,7 @@ export class TaskService {
     return this.repository.findById(auth.userId, id);
   }
 
-  createTask(auth: AuthContext, input: CreateTaskRequest): Promise<Task> {
+  async createTask(auth: AuthContext, input: CreateTaskRequest): Promise<Task> {
     const title = normalizeTitle(input.title);
 
     const description = normalizeDescription(input.description);
@@ -36,7 +36,7 @@ export class TaskService {
       title,
       description,
       tags,
-      aiTags: this.classifier.classify({ title, description, manualTags: tags }),
+      aiTags: await this.classifier.classify({ title, description, manualTags: tags }),
     });
   }
 
