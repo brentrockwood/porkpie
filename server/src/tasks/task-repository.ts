@@ -42,9 +42,13 @@ function rowToTask(row: Record<string, unknown>, tags: TaskTag[] = []): Task {
     description: row.description === null ? null : String(row.description),
     completed: Boolean(row.completed),
     tags,
-    createdAt: new Date(String(row.created_at)).toISOString(),
-    updatedAt: new Date(String(row.updated_at)).toISOString(),
+    createdAt: toIsoString(row.created_at),
+    updatedAt: toIsoString(row.updated_at),
   };
+}
+
+function toIsoString(value: unknown): string {
+  return value instanceof Date ? value.toISOString() : new Date(String(value)).toISOString();
 }
 
 function escapeLikePattern(value: string): string {
