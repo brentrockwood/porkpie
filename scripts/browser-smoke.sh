@@ -62,11 +62,11 @@ fi
 
 agent-browser click ".task-card:first-of-type .task-actions button" >/dev/null
 agent-browser fill ".task-card:first-of-type .edit-fields input:first-of-type" "Cancel should not persist" >/dev/null
-agent-browser click ".task-card:first-of-type .task-actions button:nth-of-type(2)" >/dev/null
+agent-browser press Escape >/dev/null
 
 page_text="$(agent-browser get text body)"
 if grep -F "Cancel should not persist" <<<"$page_text" >/dev/null || ! grep -F "$TITLE" <<<"$page_text" >/dev/null; then
-  echo "Browser smoke failed: cancel edit did not preserve original task" >&2
+  echo "Browser smoke failed: Escape did not cancel edit and preserve original task" >&2
   agent-browser snapshot -i >&2 || true
   exit 1
 fi
@@ -75,7 +75,7 @@ agent-browser click ".task-card:first-of-type .task-actions button" >/dev/null
 agent-browser fill ".task-card:first-of-type .edit-fields input:first-of-type" "$UPDATED_TITLE" >/dev/null
 agent-browser fill ".task-card:first-of-type .edit-fields textarea" "$UPDATED_DESCRIPTION" >/dev/null
 agent-browser fill ".task-card:first-of-type .edit-fields input[placeholder='Tags']" "$UPDATED_TAG" >/dev/null
-agent-browser click ".task-card:first-of-type .task-actions button" >/dev/null
+agent-browser press Enter >/dev/null
 
 for _ in {1..20}; do
   page_text="$(agent-browser get text body)"

@@ -1,3 +1,4 @@
+import type { KeyboardEvent } from "react";
 import type { Task } from "@porkpie/shared";
 import type { TaskFilters } from "../api";
 
@@ -38,6 +39,19 @@ export function TaskList({
   onEditingTagsChange,
   onTagClick,
 }: TaskListProps) {
+  function handleEditKeyDown(event: KeyboardEvent<HTMLFormElement>, task: Task) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      onCancelEditing();
+      return;
+    }
+
+    if (event.key === "Enter" && event.target instanceof HTMLTextAreaElement) {
+      event.preventDefault();
+      onSave(task);
+    }
+  }
+
   return (
     <section className="task-list" aria-label="Tasks">
       {tasks.length === 0 ? (
@@ -53,25 +67,45 @@ export function TaskList({
             onChange={() => onToggle(task)}
             type="checkbox"
           />
-          <div className="task-content">
-            {editingId === task.id ? (
-              <div className="edit-fields">
-                <input aria-label="Task title" value={editingTitle} onChange={(event) => onEditingTitleChange(event.target.value)} />
-                <textarea
-                  aria-label="Task description"
-                  value={editingDescription}
-                  onChange={(event) => onEditingDescriptionChange(event.target.value)}
-                  placeholder="Optional details"
-                />
-                <input
-                  aria-label="Task tags"
-                  value={editingTags}
-                  onChange={(event) => onEditingTagsChange(event.target.value)}
-                  placeholder="Tags"
-                />
+          {editingId === task.id ? (
+            <form
+              className="task-edit-form"
+              onKeyDown={(event) => handleEditKeyDown(event, task)}
+              onSubmit={(event) => {
+                event.preventDefault();
+                onSave(task);
+              }}
+            >
+              <div className="task-content">
+                <div className="edit-fields">
+                  <input aria-label="Task title" value={editingTitle} onChange={(event) => onEditingTitleChange(event.target.value)} />
+                  <textarea
+                    aria-label="Task description"
+                    value={editingDescription}
+                    onChange={(event) => onEditingDescriptionChange(event.target.value)}
+                    placeholder="Optional details"
+                  />
+                  <input
+                    aria-label="Task tags"
+                    value={editingTags}
+                    onChange={(event) => onEditingTagsChange(event.target.value)}
+                    placeholder="Tags"
+                  />
+                </div>
               </div>
-            ) : (
-              <>
+              <div className="task-actions">
+                <button type="submit">Save</button>
+                <button type="button" onClick={onCancelEditing}>
+                  Cancel
+                </button>
+                <button type="button" onClick={() => onDelete(task)}>
+                  Delete
+                </button>
+              </div>
+            </form>
+          ) : (
+            <>
+              <div className="task-content">
                 <h2 className={task.completed ? "completed" : ""}>{task.title}</h2>
                 {task.description ? <p>{task.description}</p> : null}
                 {task.tags.length > 0 ? (
@@ -85,28 +119,17 @@ export function TaskList({
                     ))}
                   </ul>
                 ) : null}
-              </>
-            )}
-          </div>
-          <div className="task-actions">
-            {editingId === task.id ? (
-              <>
-                <button type="button" onClick={() => onSave(task)}>
-                  Save
+              </div>
+              <div className="task-actions">
+                <button type="button" onClick={() => onStartEditing(task)}>
+                  Edit
                 </button>
-                <button type="button" onClick={onCancelEditing}>
-                  Cancel
+                <button type="button" onClick={() => onDelete(task)}>
+                  Delete
                 </button>
-              </>
-            ) : (
-              <button type="button" onClick={() => onStartEditing(task)}>
-                Edit
-              </button>
-            )}
-            <button type="button" onClick={() => onDelete(task)}>
-              Delete
-            </button>
-          </div>
+              </div>
+            </>
+          )}
         </article>
       ))}
     </section>
