@@ -80,6 +80,18 @@ label {
   font-weight: 700;
 }
 
+.switch-field {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.switch-field input {
+  accent-color: #7c3aed;
+  height: 1.25rem;
+  width: 2.25rem;
+}
+
 input,
 select,
 textarea {

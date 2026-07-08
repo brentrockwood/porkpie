@@ -136,12 +136,12 @@ for _ in {1..20}; do
     grep -F "$UPDATED_TAG" <<<"$page_text" >/dev/null; then
     agent-browser click ".task-card:first-of-type .tags button" >/dev/null
     agent-browser fill "input[placeholder='Search tasks']" "$UPDATED_TITLE" >/dev/null
-    agent-browser select "select" "incomplete" >/dev/null
+    agent-browser click ".switch-field input" >/dev/null
     sleep 1
     if agent-browser eval "document.querySelector('input[placeholder=\\'Filter by tag\\']')?.value" | grep -F "$UPDATED_TAG" >/dev/null && \
       agent-browser eval "new URLSearchParams(location.search).get('tag')" | grep -F "$UPDATED_TAG" >/dev/null && \
       agent-browser eval "new URLSearchParams(location.search).get('search')" | grep -F "$UPDATED_TITLE" >/dev/null && \
-      agent-browser eval "new URLSearchParams(location.search).get('status')" | grep -F "incomplete" >/dev/null; then
+      agent-browser eval "new URLSearchParams(location.search).get('showCompleted')" | grep -F "true" >/dev/null; then
       echo "Browser smoke passed: $UPDATED_TITLE"
       exit 0
     fi

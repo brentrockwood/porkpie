@@ -1,7 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import type { Task } from "@porkpie/shared";
 import { createTask, deleteTask, listTasks, updateTask } from "./api";
-import type { TaskFilters } from "./api";
 import { PaginationControls } from "./components/PaginationControls";
 import { TaskFiltersForm } from "./components/TaskFiltersForm";
 import { TaskForm } from "./components/TaskForm";
@@ -11,7 +10,7 @@ import "./styles.css";
 type UrlState = {
   search: string;
   tag: string;
-  completed: TaskFilters["completed"];
+  showCompleted: boolean;
   page: number;
   editingId: string | null;
 };
@@ -26,7 +25,7 @@ export function App() {
   const [searchFilter, setSearchFilter] = useState(initialUrlState.search);
   const [debouncedSearchFilter, setDebouncedSearchFilter] = useState(initialUrlState.search);
   const [tagFilter, setTagFilter] = useState(initialUrlState.tag);
-  const [completionFilter, setCompletionFilter] = useState<TaskFilters["completed"]>(initialUrlState.completed);
+  const [showCompleted, setShowCompleted] = useState(initialUrlState.showCompleted);
   const [page, setPage] = useState(initialUrlState.page);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -46,7 +45,7 @@ export function App() {
       setSearchFilter(urlState.search);
       setDebouncedSearchFilter(urlState.search);
       setTagFilter(urlState.tag);
-      setCompletionFilter(urlState.completed);
+      setShowCompleted(urlState.showCompleted);
       setPage(urlState.page);
       setPendingEditingId(urlState.editingId);
       if (urlState.editingId !== editingId) {
@@ -73,14 +72,14 @@ export function App() {
   }, [debouncedSearchFilter, searchFilter]);
 
   useEffect(() => {
-    syncUrl({ search: debouncedSearchFilter, tag: tagFilter, completed: completionFilter, page, editingId }, lastUrl);
-  }, [debouncedSearchFilter, editingId, completionFilter, page, tagFilter]);
+    syncUrl({ search: debouncedSearchFilter, tag: tagFilter, showCompleted, page, editingId }, lastUrl);
+  }, [debouncedSearchFilter, editingId, page, showCompleted, tagFilter]);
 
   useEffect(() => {
     const controller = new AbortController();
     void reloadTasks(controller.signal);
     return () => controller.abort();
-  }, [debouncedSearchFilter, tagFilter, completionFilter, page]);
+  }, [debouncedSearchFilter, tagFilter, showCompleted, page]);
 
   useEffect(() => {
     if (!pendingEditingId || editingId === pendingEditingId) return;
@@ -102,7 +101,7 @@ export function App() {
         {
           search: debouncedSearchFilter,
           tag: tagFilter,
-          completed: completionFilter,
+          completed: showCompleted ? "all" : "incomplete",
           page,
         },
         signal,
@@ -186,8 +185,8 @@ export function App() {
     setPage(1);
   }
 
-  function handleCompletionFilterChange(value: TaskFilters["completed"]) {
-    setCompletionFilter(value);
+  function handleShowCompletedChange(value: boolean) {
+    setShowCompleted(value);
     setPage(1);
   }
 
@@ -241,10 +240,10 @@ export function App() {
       <TaskFiltersForm
         searchFilter={searchFilter}
         tagFilter={tagFilter}
-        completionFilter={completionFilter}
+        showCompleted={showCompleted}
         onSearchFilterChange={handleSearchFilterChange}
         onTagFilterChange={handleTagFilterChange}
-        onCompletionFilterChange={handleCompletionFilterChange}
+        onShowCompletedChange={handleShowCompletedChange}
       />
 
       {error ? <p className="error">{error}</p> : null}
@@ -260,7 +259,7 @@ export function App() {
       <TaskList
         tasks={tasks}
         hasActiveFilters={Boolean(debouncedSearchFilter || tagFilter)}
-        completionFilter={completionFilter}
+        completionFilter={showCompleted ? "all" : "incomplete"}
         editingId={editingId}
         editingTitle={editingTitle}
         editingDescription={editingDescription}
@@ -286,21 +285,15 @@ function parseTags(value: string): string[] {
 function readUrlState(): UrlState {
   const params = new URLSearchParams(window.location.search);
   const page = Number(params.get("page") ?? "1");
-  const completed = parseCompletionFilter(params.get("status"));
   const editingId = window.location.pathname.split("/").filter(Boolean)[0] ?? null;
 
   return {
     search: params.get("search") ?? "",
     tag: params.get("tag") ?? "",
-    completed,
+    showCompleted: params.get("showCompleted") === "true",
     page: Number.isInteger(page) && page > 0 ? page : 1,
     editingId: editingId ? decodeURIComponent(editingId) : null,
   };
-}
-
-function parseCompletionFilter(value: string | null): TaskFilters["completed"] {
-  if (value === "complete" || value === "incomplete") return value;
-  return "all";
 }
 
 function syncUrl(state: UrlState, lastUrl: { current: string }): void {
@@ -311,11 +304,11 @@ function syncUrl(state: UrlState, lastUrl: { current: string }): void {
   lastUrl.current = nextUrl;
 }
 
-function buildUrl({ search, tag, completed, page, editingId }: UrlState): string {
+function buildUrl({ search, tag, showCompleted, page, editingId }: UrlState): string {
   const params = new URLSearchParams();
   if (search) params.set("search", search);
   if (tag) params.set("tag", tag);
-  if (completed && completed !== "all") params.set("status", completed);
+  if (showCompleted) params.set("showCompleted", "true");
   if (page > 1) params.set("page", String(page));
 
   const path = editingId ? `/${encodeURIComponent(editingId)}` : "/";

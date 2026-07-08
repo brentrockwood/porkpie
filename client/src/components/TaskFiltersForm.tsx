@@ -1,21 +1,19 @@
-import type { TaskFilters } from "../api";
-
 type TaskFiltersFormProps = {
   searchFilter: string;
   tagFilter: string;
-  completionFilter: TaskFilters["completed"];
+  showCompleted: boolean;
   onSearchFilterChange: (value: string) => void;
   onTagFilterChange: (value: string) => void;
-  onCompletionFilterChange: (value: TaskFilters["completed"]) => void;
+  onShowCompletedChange: (value: boolean) => void;
 };
 
 export function TaskFiltersForm({
   searchFilter,
   tagFilter,
-  completionFilter,
+  showCompleted,
   onSearchFilterChange,
   onTagFilterChange,
-  onCompletionFilterChange,
+  onShowCompletedChange,
 }: TaskFiltersFormProps) {
   return (
     <section className="filters" aria-label="Task filters">
@@ -27,16 +25,9 @@ export function TaskFiltersForm({
         Tag
         <input value={tagFilter} onChange={(event) => onTagFilterChange(event.target.value)} placeholder="Filter by tag" />
       </label>
-      <label>
-        Status
-        <select
-          value={completionFilter}
-          onChange={(event) => onCompletionFilterChange(event.target.value as TaskFilters["completed"])}
-        >
-          <option value="all">All</option>
-          <option value="incomplete">Incomplete</option>
-          <option value="complete">Complete</option>
-        </select>
+      <label className="switch-field">
+        <span>Show completed</span>
+        <input checked={showCompleted} onChange={(event) => onShowCompletedChange(event.target.checked)} type="checkbox" />
       </label>
     </section>
   );
