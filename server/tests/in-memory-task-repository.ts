@@ -43,7 +43,7 @@ export class InMemoryTaskRepository implements TaskRepository {
       title: task.title,
       description: task.description,
       completed: false,
-      tags: normalizeTags(task.tags),
+      tags: normalizeTags(task.tags, task.aiTags),
       createdAt: now,
       updatedAt: now,
     };
@@ -60,7 +60,7 @@ export class InMemoryTaskRepository implements TaskRepository {
       title: patch.title ?? existing.title,
       description: patch.description !== undefined ? patch.description : existing.description,
       completed: patch.completed ?? existing.completed,
-      tags: patch.tags === undefined ? existing.tags : normalizeTags(patch.tags),
+      tags: patch.tags === undefined ? existing.tags : normalizeTags(patch.tags, existing.tags.flatMap((tag) => (tag.source === "ai" && tag.confidence !== null ? [{ name: tag.name, confidence: tag.confidence }] : []))),
       updatedAt: new Date().toISOString(),
     };
     this.tasks.set(id, updated);
@@ -79,8 +79,15 @@ function stripUserId(task: Task & { userId: string }): Task {
   return rest;
 }
 
-function normalizeTags(names: string[]): Task["tags"] {
-  return [...new Set(names)].sort().map((name) => ({ name, source: "manual" as const, confidence: null }));
+function normalizeTags(names: string[], aiTags: { name: string; confidence: number }[] = []): Task["tags"] {
+  const manualTags = [...new Set(names)].sort().map((name) => ({ name, source: "manual" as const, confidence: null }));
+  const manualNames = new Set(manualTags.map((tag) => tag.name));
+  const inferredTags = aiTags
+    .filter((tag) => !manualNames.has(tag.name))
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .map((tag) => ({ name: tag.name, source: "ai" as const, confidence: tag.confidence }));
+
+  return [...manualTags, ...inferredTags].sort((left, right) => left.name.localeCompare(right.name));
 }
 
 function matchesSearch(task: Task, search: string): boolean {

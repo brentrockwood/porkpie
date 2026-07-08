@@ -84,6 +84,24 @@ describe("task API", () => {
     expect(tags.body).toEqual({ tags: ["errands", "shopping", "work"] });
   });
 
+  it("adds deterministic AI tags without duplicating manual tags", async () => {
+    const app = testApp();
+
+    const inferred = await request(app)
+      .post("/api/tasks")
+      .send({ title: "Prepare interview presentation", description: "Review architecture notes" })
+      .expect(201);
+
+    expect(inferred.body.task.tags).toEqual([{ name: "work", source: "ai", confidence: 0.85 }]);
+
+    const manualOverride = await request(app)
+      .post("/api/tasks")
+      .send({ title: "Prepare interview presentation", tags: ["Work"] })
+      .expect(201);
+
+    expect(manualOverride.body.task.tags).toEqual([{ name: "work", source: "manual", confidence: null }]);
+  });
+
   it("paginates task lists with 20 items by default", async () => {
     const app = testApp();
 

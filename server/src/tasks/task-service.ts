@@ -1,12 +1,16 @@
 import { randomUUID } from "node:crypto";
 import type { CreateTaskRequest, Task, UpdateTaskRequest } from "@porkpie/shared";
 import type { AuthContext } from "../auth/auth-context.js";
+import { HeuristicTaskClassifier, type TaskClassifier } from "./task-classifier.js";
 import type { PagedTasks, TaskFilters, TaskRepository } from "./task-repository.js";
 
 export class ValidationError extends Error {}
 
 export class TaskService {
-  constructor(private readonly repository: TaskRepository) {}
+  constructor(
+    private readonly repository: TaskRepository,
+    private readonly classifier: TaskClassifier = new HeuristicTaskClassifier(),
+  ) {}
 
   listTasks(auth: AuthContext, filters: TaskFilters): Promise<PagedTasks> {
     return this.repository.list(auth.userId, filters);
@@ -23,12 +27,16 @@ export class TaskService {
   createTask(auth: AuthContext, input: CreateTaskRequest): Promise<Task> {
     const title = normalizeTitle(input.title);
 
+    const description = normalizeDescription(input.description);
+    const tags = normalizeTags(input.tags);
+
     return this.repository.create({
       id: randomUUID(),
       userId: auth.userId,
       title,
-      description: normalizeDescription(input.description),
-      tags: normalizeTags(input.tags),
+      description,
+      tags,
+      aiTags: this.classifier.classify({ title, description, manualTags: tags }),
     });
   }
 

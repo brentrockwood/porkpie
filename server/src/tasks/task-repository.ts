@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Pool, PoolClient, QueryResult } from "pg";
 import type { Task, TaskTag } from "@porkpie/shared";
+import type { ClassifiedTaskTag } from "./task-classifier.js";
 
 export type TaskFilters = {
   completed?: boolean;
@@ -24,6 +25,7 @@ export type NewTask = {
   title: string;
   description: string | null;
   tags: string[];
+  aiTags: ClassifiedTaskTag[];
 };
 
 export type TaskPatch = {
@@ -149,6 +151,7 @@ export class PostgresTaskRepository implements TaskRepository {
       );
 
       await replaceManualTags(client, task.id, task.tags);
+      await replaceAiTags(client, task.id, task.aiTags);
       const tags = await loadTagsForTasks(client, [task.id]);
       return rowToTask(result.rows[0], tags.get(task.id) ?? []);
     });
@@ -243,19 +246,38 @@ async function replaceManualTags(db: Queryable, taskId: string, names: string[])
   await db.query("DELETE FROM task_tags WHERE task_id = $1 AND source = 'manual'", [taskId]);
   if (names.length === 0) return;
 
+  const tagIds = await upsertTags(db, names);
+  await db.query(
+    `INSERT INTO task_tags (task_id, tag_id, source, confidence)
+     SELECT $1, unnest($2::uuid[]), 'manual', NULL
+     ON CONFLICT DO NOTHING`,
+    [taskId, tagIds],
+  );
+}
+
+async function replaceAiTags(db: Queryable, taskId: string, tags: ClassifiedTaskTag[]): Promise<void> {
+  await db.query("DELETE FROM task_tags WHERE task_id = $1 AND source = 'ai'", [taskId]);
+  if (tags.length === 0) return;
+
+  const tagIds = await upsertTags(db, tags.map((tag) => tag.name));
+  await db.query(
+    `INSERT INTO task_tags (task_id, tag_id, source, confidence)
+     SELECT $1, unnest($2::uuid[]), 'ai', unnest($3::numeric[])
+     ON CONFLICT DO NOTHING`,
+    [taskId, tagIds, tags.map((tag) => tag.confidence)],
+  );
+}
+
+async function upsertTags(db: Queryable, names: string[]): Promise<string[]> {
   const ids = names.map(() => randomUUID());
   const tagResult = await db.query(
     `INSERT INTO tags (id, name)
      SELECT unnest($1::uuid[]), unnest($2::text[])
      ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
-     RETURNING id`,
+     RETURNING id, name`,
     [ids, names],
   );
 
-  await db.query(
-    `INSERT INTO task_tags (task_id, tag_id, source, confidence)
-     SELECT $1, unnest($2::uuid[]), 'manual', NULL
-     ON CONFLICT DO NOTHING`,
-    [taskId, tagResult.rows.map((row) => row.id)],
-  );
+  const idsByName = new Map(tagResult.rows.map((row) => [String(row.name), String(row.id)]));
+  return names.map((name) => idsByName.get(name)).filter((id): id is string => id !== undefined);
 }
