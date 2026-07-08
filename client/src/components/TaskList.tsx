@@ -94,40 +94,41 @@ export function TaskList({
                 </div>
               </div>
               <div className="task-actions">
-                <button type="submit">Save</button>
-                <button type="button" onClick={onCancelEditing}>
-                  Cancel
+                <button aria-label="Save task" className="icon-button" type="submit">
+                  ✓
                 </button>
-                <button type="button" onClick={() => onDelete(task)}>
-                  Delete
+                <button aria-label="Cancel editing" className="icon-button" type="button" onClick={onCancelEditing}>
+                  ✕
+                </button>
+                <button aria-label="Delete task" className="icon-button danger" type="button" onClick={() => onDelete(task)}>
+                  🗑
                 </button>
               </div>
             </form>
           ) : (
             <>
-              <div className="task-content">
-                <h2 className={task.completed ? "completed" : ""}>{task.title}</h2>
-                {task.description ? <p>{task.description}</p> : null}
-                {task.tags.length > 0 ? (
-                  <ul className="tags" aria-label={`Tags for ${task.title}`}>
-                    {task.tags.map((tag) => (
-                      <li key={`${tag.source}:${tag.name}`}>
-                        <button type="button" onClick={() => onTagClick(tag.name)}>
-                          {tag.name}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-              </div>
+              <button className="task-open-button" type="button" onClick={() => onStartEditing(task)}>
+                <span className="task-content">
+                  <h2 className={task.completed ? "completed" : ""}>{task.title}</h2>
+                  {task.description ? <p>{task.description}</p> : null}
+                </span>
+              </button>
               <div className="task-actions">
-                <button type="button" onClick={() => onStartEditing(task)}>
-                  Edit
-                </button>
-                <button type="button" onClick={() => onDelete(task)}>
-                  Delete
+                <button aria-label="Delete task" className="icon-button danger" type="button" onClick={() => onDelete(task)}>
+                  🗑
                 </button>
               </div>
+              {task.tags.length > 0 ? (
+                <ul className="tags" aria-label={`Tags for ${task.title}`}>
+                  {task.tags.map((tag) => (
+                    <li key={`${tag.source}:${tag.name}`}>
+                      <button type="button" onClick={() => onTagClick(tag.name)}>
+                        {tag.name}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </>
           )}
         </article>

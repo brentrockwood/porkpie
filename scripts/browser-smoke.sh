@@ -63,7 +63,7 @@ if ! grep -F "$TITLE" <<<"$page_text" >/dev/null || ! grep -F "$TAG" <<<"$page_t
   exit 1
 fi
 
-agent-browser click ".task-card:first-of-type .task-actions button" >/dev/null
+agent-browser click ".task-card:first-of-type .task-open-button" >/dev/null
 if agent-browser eval "location.pathname !== '/'" | grep -F "true" >/dev/null; then
   :
 else
@@ -87,7 +87,7 @@ if grep -F "Cancel button should not persist" <<<"$page_text" >/dev/null || ! gr
   exit 1
 fi
 
-agent-browser click ".task-card:first-of-type .task-actions button" >/dev/null
+agent-browser click ".task-card:first-of-type .task-open-button" >/dev/null
 agent-browser fill ".task-card:first-of-type .edit-fields input:first-of-type" "Escape should not persist" >/dev/null
 agent-browser press Escape >/dev/null
 
@@ -98,7 +98,7 @@ if grep -F "Escape should not persist" <<<"$page_text" >/dev/null || ! grep -F "
   exit 1
 fi
 
-agent-browser click ".task-card:first-of-type .task-actions button" >/dev/null
+agent-browser click ".task-card:first-of-type .task-open-button" >/dev/null
 agent-browser fill ".task-card:first-of-type .edit-fields input:first-of-type" "$BUTTON_UPDATED_TITLE" >/dev/null
 agent-browser fill ".task-card:first-of-type .edit-fields textarea" "$BUTTON_UPDATED_DESCRIPTION" >/dev/null
 agent-browser fill ".task-card:first-of-type .edit-fields input[placeholder='Tags']" "$BUTTON_UPDATED_TAG" >/dev/null
@@ -123,7 +123,7 @@ if ! grep -F "$BUTTON_UPDATED_TITLE" <<<"$page_text" >/dev/null || \
   exit 1
 fi
 
-agent-browser click ".task-card:first-of-type .task-actions button" >/dev/null
+agent-browser click ".task-card:first-of-type .task-open-button" >/dev/null
 agent-browser fill ".task-card:first-of-type .edit-fields input:first-of-type" "$UPDATED_TITLE" >/dev/null
 agent-browser fill ".task-card:first-of-type .edit-fields textarea" "$UPDATED_DESCRIPTION" >/dev/null
 agent-browser fill ".task-card:first-of-type .edit-fields input[placeholder='Tags']" "$UPDATED_TAG" >/dev/null
