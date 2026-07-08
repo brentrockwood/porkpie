@@ -157,13 +157,17 @@ textarea {
   padding: 0;
 }
 
-.tags li {
+.tags button {
   background: #ede9fe;
   border-radius: 999px;
   color: #5b21b6;
   font-size: 0.85rem;
   font-weight: 700;
   padding: 0.25rem 0.6rem;
+}
+
+.tags button:hover {
+  background: #ddd6fe;
 }
 
 .edit-fields {

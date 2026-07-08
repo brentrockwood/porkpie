@@ -9,7 +9,7 @@ export type TaskFilters = {
   page?: number;
 };
 
-export async function listTasks(filters: TaskFilters = {}): Promise<TaskListResponse> {
+export async function listTasks(filters: TaskFilters = {}, signal?: AbortSignal): Promise<TaskListResponse> {
   const params = new URLSearchParams();
 
   if (filters.search) params.set("search", filters.search);
@@ -19,7 +19,7 @@ export async function listTasks(filters: TaskFilters = {}): Promise<TaskListResp
   if (filters.page) params.set("page", String(filters.page));
 
   const query = params.toString();
-  const response = await fetch(`${apiBaseUrl}/api/tasks${query ? `?${query}` : ""}`);
+  const response = await fetch(`${apiBaseUrl}/api/tasks${query ? `?${query}` : ""}`, { signal });
   await ensureOk(response);
   return (await response.json()) as TaskListResponse;
 }

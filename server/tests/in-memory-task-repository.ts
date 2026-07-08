@@ -10,7 +10,7 @@ export class InMemoryTaskRepository implements TaskRepository {
       .filter((task) => filters.completed === undefined || task.completed === filters.completed)
       .filter((task) => !filters.tag || task.tags.some((tag) => tag.name === filters.tag))
       .filter((task) => !filters.search || matchesSearch(task, filters.search))
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id))
       .map(stripUserId);
 
     const start = (filters.page - 1) * filters.pageSize;
@@ -50,7 +50,9 @@ export class InMemoryTaskRepository implements TaskRepository {
 
     const updated = {
       ...existing,
-      ...patch,
+      title: patch.title ?? existing.title,
+      description: patch.description !== undefined ? patch.description : existing.description,
+      completed: patch.completed ?? existing.completed,
       tags: patch.tags === undefined ? existing.tags : patch.tags.map((name) => ({ name, source: "manual" as const, confidence: null })),
       updatedAt: new Date().toISOString(),
     };

@@ -82,12 +82,15 @@ for _ in {1..20}; do
   if grep -F "$UPDATED_TITLE" <<<"$page_text" >/dev/null && \
     grep -F "$UPDATED_DESCRIPTION" <<<"$page_text" >/dev/null && \
     grep -F "$UPDATED_TAG" <<<"$page_text" >/dev/null; then
-    echo "Browser smoke passed: $UPDATED_TITLE"
-    exit 0
+    agent-browser click ".task-card:first-of-type .tags button" >/dev/null
+    if agent-browser eval "document.querySelector('input[placeholder=\\'Filter by tag\\']')?.value" | grep -F "$UPDATED_TAG" >/dev/null; then
+      echo "Browser smoke passed: $UPDATED_TITLE"
+      exit 0
+    fi
   fi
   sleep 1
 done
 
-echo "Browser smoke failed: edited title/details/tag did not appear" >&2
+echo "Browser smoke failed: edited title/details/tag did not appear or tag click did not filter" >&2
 agent-browser snapshot -i >&2 || true
 exit 1

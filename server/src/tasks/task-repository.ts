@@ -102,7 +102,7 @@ export class PostgresTaskRepository implements TaskRepository {
     const result = await this.pool.query(
       `SELECT tasks.* FROM tasks
        WHERE ${where.join(" AND ")}
-       ORDER BY tasks.created_at DESC
+       ORDER BY tasks.created_at DESC, tasks.id DESC
        LIMIT $${values.length - 1} OFFSET $${values.length}`,
       values,
     );

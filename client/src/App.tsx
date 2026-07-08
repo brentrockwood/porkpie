@@ -10,6 +10,7 @@ export function App() {
   const [description, setDescription] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [searchFilter, setSearchFilter] = useState("");
+  const [debouncedSearchFilter, setDebouncedSearchFilter] = useState("");
   const [tagFilter, setTagFilter] = useState("");
   const [completionFilter, setCompletionFilter] = useState<TaskFilters["completed"]>("all");
   const [page, setPage] = useState(1);
@@ -22,22 +23,34 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    void reloadTasks();
-  }, [searchFilter, tagFilter, completionFilter, page]);
+    const timeout = window.setTimeout(() => {
+      setDebouncedSearchFilter(searchFilter);
+      setPage(1);
+    }, 300);
 
-  async function reloadTasks() {
+    return () => window.clearTimeout(timeout);
+  }, [searchFilter]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void reloadTasks(controller.signal);
+    return () => controller.abort();
+  }, [debouncedSearchFilter, tagFilter, completionFilter, page]);
+
+  async function reloadTasks(signal?: AbortSignal) {
     try {
       setError(null);
       const loaded = await listTasks({
-        search: searchFilter,
+        search: debouncedSearchFilter,
         tag: tagFilter,
         completed: completionFilter,
         page,
-      });
+      }, signal);
       setTasks(loaded.tasks);
       setTotal(loaded.total);
       setTotalPages(loaded.totalPages);
     } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
       setError(err instanceof Error ? err.message : "Failed to load tasks");
     }
   }
@@ -89,7 +102,7 @@ export function App() {
 
     try {
       await deleteTask(task.id);
-      setTasks((current) => current.filter((item) => item.id !== task.id));
+      await reloadTasks();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete task");
     }
@@ -191,7 +204,11 @@ export function App() {
       </nav>
 
       <section className="task-list" aria-label="Tasks">
-        {tasks.length === 0 ? <p className="empty">No tasks yet.</p> : null}
+        {tasks.length === 0 ? (
+          <p className="empty">
+            {debouncedSearchFilter || tagFilter || completionFilter !== "all" ? "No tasks match the current filters." : "No tasks yet."}
+          </p>
+        ) : null}
         {tasks.map((task) => (
           <article className="task-card" key={task.id}>
             <input
@@ -203,13 +220,14 @@ export function App() {
             <div className="task-content">
               {editingId === task.id ? (
                 <div className="edit-fields">
-                  <input value={editingTitle} onChange={(event) => setEditingTitle(event.target.value)} />
+                  <input aria-label="Task title" value={editingTitle} onChange={(event) => setEditingTitle(event.target.value)} />
                   <textarea
+                    aria-label="Task description"
                     value={editingDescription}
                     onChange={(event) => setEditingDescription(event.target.value)}
                     placeholder="Optional details"
                   />
-                  <input value={editingTags} onChange={(event) => setEditingTags(event.target.value)} placeholder="Tags" />
+                  <input aria-label="Task tags" value={editingTags} onChange={(event) => setEditingTags(event.target.value)} placeholder="Tags" />
                 </div>
               ) : (
                 <>
@@ -218,7 +236,17 @@ export function App() {
                   {task.tags.length > 0 ? (
                     <ul className="tags" aria-label={`Tags for ${task.title}`}>
                       {task.tags.map((tag) => (
-                        <li key={`${tag.source}:${tag.name}`}>{tag.name}</li>
+                        <li key={`${tag.source}:${tag.name}`}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTagFilter(tag.name);
+                              setPage(1);
+                            }}
+                          >
+                            {tag.name}
+                          </button>
+                        </li>
                       ))}
                     </ul>
                   ) : null}
