@@ -330,7 +330,7 @@ The final design:
 - retries once on invalid output,
 - deterministically drops repeated manual tags,
 - merges duplicate AI tag names by keeping the highest confidence,
-- logs normalization counters:
+- logs normalization counters and tag-source counts:
 
 ```json
 {
@@ -338,11 +338,15 @@ The final design:
   "normalization": {
     "duplicateTagNames": 1,
     "manualTagDuplicates": 1
+  },
+  "tagSources": {
+    "existing": 1,
+    "new": 0
   }
 }
 ```
 
-That became one of the clearest senior-engineering narratives in the project: we started with validation and fallback, added observability, then used that observability model to decide which failures should become deterministic normalization and which should remain invalid.
+That telemetry then pointed to the next refinement: passing the user's known tag vocabulary into the model prompt so it can reuse semantically appropriate existing tags before inventing new ones. That became one of the clearest senior-engineering narratives in the project: we started with validation and fallback, added observability, then used that observability model to decide which failures should become deterministic normalization and which should remain invalid.
 
 ## How the pull-request loop shaped the app
 
