@@ -50,7 +50,7 @@ export function TaskForm({
           placeholder="shopping, grocery"
           value={tagInput}
         />
-        <Button type="submit" variant="contained">
+        <Button fullWidth type="submit" variant="contained">
           Create task
         </Button>
       </Stack>
