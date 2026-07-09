@@ -102,6 +102,24 @@ describe("task API", () => {
     expect(manualOverride.body.task.tags).toEqual([{ name: "work", source: "manual", confidence: null }]);
   });
 
+  it("replaces AI tags with manual tags when editing", async () => {
+    const app = testApp();
+
+    const created = await request(app)
+      .post("/api/tasks")
+      .send({ title: "Prepare interview presentation", description: "Review architecture notes" })
+      .expect(201);
+
+    expect(created.body.task.tags).toEqual([{ name: "work", source: "ai", confidence: 0.85 }]);
+
+    const updated = await request(app)
+      .patch(`/api/tasks/${created.body.task.id}`)
+      .send({ tags: ["follow-up"] })
+      .expect(200);
+
+    expect(updated.body.task.tags).toEqual([{ name: "follow-up", source: "manual", confidence: null }]);
+  });
+
   it("paginates task lists with 20 items by default", async () => {
     const app = testApp();
 

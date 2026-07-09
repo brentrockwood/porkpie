@@ -60,7 +60,7 @@ export class InMemoryTaskRepository implements TaskRepository {
       title: patch.title ?? existing.title,
       description: patch.description !== undefined ? patch.description : existing.description,
       completed: patch.completed ?? existing.completed,
-      tags: patch.tags === undefined ? existing.tags : normalizeTags(patch.tags, existing.tags.flatMap((tag) => (tag.source === "ai" && tag.confidence !== null ? [{ name: tag.name, confidence: tag.confidence }] : []))),
+      tags: patch.tags === undefined ? existing.tags : normalizeTags(patch.tags),
       updatedAt: new Date().toISOString(),
     };
     this.tasks.set(id, updated);
