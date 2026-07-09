@@ -66,7 +66,25 @@ docker compose up --build
 
 The API will be available at <http://localhost:4000> and the client at <http://localhost:5173>.
 
+To test from a phone or tablet on the same local network, open `http://<your-computer-lan-ip>:5173` on the device. The dev client uses same-origin `/api` calls through the Vite proxy, so mobile browsers do not need to reach `localhost:4000` directly.
+
 API documentation is available at <http://localhost:4000/docs>, with the raw OpenAPI contract at <http://localhost:4000/openapi.json>.
+
+## Demo script
+
+1. Open the app on desktop or mobile: `http://<your-computer-lan-ip>:5173`.
+2. Create `Buy milk` with no manual tags. In the Ollama-backed demo environment, the new card should show an AI-suggested `shopping` chip.
+3. Create `Clean garage` and `Pay car insurance bill` to show broad reusable AI tags such as `home` and `finance`.
+4. Tap an AI tag chip to filter the list by that tag.
+5. Edit a task and replace its tags manually. The manual tag set replaces the previous AI suggestions so user intent wins.
+6. Use search, the completed toggle, and Load more to show the URL-backed state and list behavior.
+
+## Demo troubleshooting
+
+- If title-only tasks do not get AI tags, verify the server container has Ollama settings: `docker compose exec server env | grep OLLAMA`.
+- After changing `.env` or `docker-compose.yml`, recreate the app containers: `docker compose up -d --force-recreate server client`.
+- Confirm the client proxy works from the dev origin: `curl http://localhost:5173/api/tasks`.
+- For mobile access, make sure the phone is on the same network and use the computer's LAN IP, not `localhost`.
 
 The compose stack uses a small local Node development image with current npm and a Chainguard Postgres image to keep fixable high/critical container vulnerabilities out of the demo runtime. If switching from the earlier Postgres 16 image, reset the local database volume once. Warning: this deletes the local database volume and all data in it.
 

@@ -102,6 +102,24 @@ describe("task API", () => {
     expect(manualOverride.body.task.tags).toEqual([{ name: "work", source: "manual", confidence: null }]);
   });
 
+  it("replaces AI tags with manual tags when editing", async () => {
+    const app = testApp();
+
+    const created = await request(app)
+      .post("/api/tasks")
+      .send({ title: "Prepare interview presentation", description: "Review architecture notes" })
+      .expect(201);
+
+    expect(created.body.task.tags).toEqual([{ name: "work", source: "ai", confidence: 0.85 }]);
+
+    const updated = await request(app)
+      .patch(`/api/tasks/${created.body.task.id}`)
+      .send({ tags: ["follow-up"] })
+      .expect(200);
+
+    expect(updated.body.task.tags).toEqual([{ name: "follow-up", source: "manual", confidence: null }]);
+  });
+
   it("paginates task lists with 20 items by default", async () => {
     const app = testApp();
 
@@ -147,6 +165,17 @@ describe("task API", () => {
 
     const response = await request(app).post("/api/tasks").send({ title: "   " }).expect(400);
     expect(response.body.error).toBe("title is required");
+  });
+
+  it("rejects non-object request bodies", async () => {
+    const app = testApp();
+
+    const createResponse = await request(app).post("/api/tasks").send([]).expect(400);
+    expect(createResponse.body.error).toBe("request body must be an object");
+
+    const task = await request(app).post("/api/tasks").send({ title: "Valid task" }).expect(201);
+    const updateResponse = await request(app).patch(`/api/tasks/${task.body.task.id}`).send([]).expect(400);
+    expect(updateResponse.body.error).toBe("request body must be an object");
   });
 
   it("returns 400 for malformed JSON", async () => {

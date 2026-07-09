@@ -1,5 +1,4 @@
 import { useId, useState } from "react";
-import { flushSync } from "react-dom";
 import { Box, Chip, TextField } from "@mui/material";
 
 type TagAutocompleteProps = {
@@ -8,10 +7,9 @@ type TagAutocompleteProps = {
   value: string;
   availableTags: string[];
   onChange: (value: string) => void;
-  onEnter?: (value: string) => void;
 };
 
-export function TagAutocomplete({ label, placeholder, value, availableTags, onChange, onEnter }: TagAutocompleteProps) {
+export function TagAutocomplete({ label, placeholder, value, availableTags, onChange }: TagAutocompleteProps) {
   const [inputValue, setInputValue] = useState("");
   const datalistId = useId();
   const tags = parseTags(value);
@@ -21,10 +19,10 @@ export function TagAutocomplete({ label, placeholder, value, availableTags, onCh
   }
 
   function commitInput(): string {
-    const next = inputValue.trim().toLowerCase();
-    if (!next) return tags.join(", ");
+    const typedTags = inputValue.split(",").map((tag) => tag.trim().toLowerCase()).filter(Boolean);
+    if (typedTags.length === 0) return tags.join(", ");
 
-    const nextTags = [...new Set([...tags, next])];
+    const nextTags = [...new Set([...tags, ...typedTags])];
     updateTags(nextTags);
     setInputValue("");
     return nextTags.join(", ");
@@ -49,11 +47,7 @@ export function TagAutocomplete({ label, placeholder, value, availableTags, onCh
         onKeyDown={(event) => {
           if (event.key !== "Enter") return;
           event.preventDefault();
-          let nextValue = tags.join(", ");
-          flushSync(() => {
-            nextValue = commitInput();
-          });
-          onEnter?.(nextValue);
+          commitInput();
         }}
         placeholder={placeholder}
         value={inputValue}

@@ -18,6 +18,32 @@ if ! command -v agent-browser >/dev/null 2>&1; then
   exit 1
 fi
 
+cleanup() {
+  agent-browser close --all >/dev/null 2>&1 || true
+  API_URL="$API_URL" TITLE_PREFIX="$TITLE" node --input-type=module >/dev/null 2>&1 <<'JS' || true
+const apiUrl = process.env.API_URL;
+const titlePrefix = process.env.TITLE_PREFIX;
+if (!apiUrl || !titlePrefix) process.exit(0);
+
+const response = await fetch(`${apiUrl}/api/tasks?search=${encodeURIComponent(titlePrefix)}&completed=all&pageSize=100`);
+if (!response.ok) process.exit(0);
+const body = await response.json();
+await Promise.all(
+  body.tasks
+    .filter((task) => typeof task.title === 'string' && task.title.startsWith(titlePrefix))
+    .map((task) => fetch(`${apiUrl}/api/tasks/${encodeURIComponent(task.id)}`, { method: 'DELETE' })),
+);
+JS
+}
+trap cleanup EXIT
+
+for _ in {1..60}; do
+  if curl -fsS --max-time 10 "$API_URL/health" >/dev/null && curl -fsS --max-time 10 "$APP_URL" >/dev/null; then
+    break
+  fi
+  sleep 1
+done
+
 curl -fsS --max-time 10 "$API_URL/health" >/dev/null
 curl -fsS --max-time 10 "$APP_URL" >/dev/null
 
@@ -129,8 +155,8 @@ agent-browser click ".task-card:first-of-type .task-open-button" >/dev/null
 agent-browser fill ".task-card:first-of-type .edit-fields input:first-of-type" "$UPDATED_TITLE" >/dev/null
 agent-browser fill ".task-card:first-of-type .edit-fields textarea" "$UPDATED_DESCRIPTION" >/dev/null
 agent-browser fill ".task-card:first-of-type .edit-fields input[placeholder='Tags']" "$UPDATED_TAG" >/dev/null
-agent-browser press Tab >/dev/null
 agent-browser press Enter >/dev/null
+agent-browser click ".task-card:first-of-type .task-actions button" >/dev/null
 
 for _ in {1..20}; do
   page_text="$(agent-browser get text body)"

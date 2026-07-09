@@ -1,4 +1,4 @@
-import type { ClassifiedTaskTag, ClassificationInput, ClassifierLogger, TaskClassifier } from "./task-classifier.js";
+import { summarizeTagSources, type ClassifiedTaskTag, type ClassificationInput, type ClassifierLogger, type TaskClassifier } from "./task-classifier.js";
 
 export type OllamaTaskClassifierConfig = {
   baseUrl: string;
@@ -42,33 +42,31 @@ export class OllamaTaskClassifier implements TaskClassifier {
   }
 
   async classify(input: ClassificationInput): Promise<ClassifiedTaskTag[]> {
-    try {
-      const firstAttempt = await this.classifyWithOllama(input);
-      if (firstAttempt) {
-        this.logSuccess(firstAttempt, 1);
-        return firstAttempt.tags;
-      }
+    let attempts = 0;
 
-      const secondAttempt = await this.classifyWithOllama(input);
-      if (secondAttempt) {
-        this.logSuccess(secondAttempt, 2);
-        return secondAttempt.tags;
+    try {
+      for (attempts = 1; attempts <= 2; attempts += 1) {
+        const result = await this.classifyWithOllama(input);
+        if (result) {
+          this.logSuccess(result, attempts);
+          return result.tags;
+        }
       }
 
       const fallbackTags = await this.config.fallback.classify(input);
-      this.config.logger?.({ classifier: "ollama", outcome: "fallback", tagCount: fallbackTags.length, model: this.config.model, reason: "invalid_response", attempts: 2 });
+      this.config.logger?.({ classifier: "ollama", outcome: "fallback", tagCount: fallbackTags.length, model: this.config.model, reason: "invalid_response", attempts: attempts - 1, tagSources: summarizeTagSources(fallbackTags, input.existingTags) });
       return fallbackTags;
     } catch (error) {
       console.warn("Ollama task classification failed; using heuristic fallback", error);
       const fallbackTags = await this.config.fallback.classify(input);
-      this.config.logger?.({ classifier: "ollama", outcome: "fallback", tagCount: fallbackTags.length, model: this.config.model, reason: "error", attempts: 1 });
+      this.config.logger?.({ classifier: "ollama", outcome: "fallback", tagCount: fallbackTags.length, model: this.config.model, reason: "error", attempts, tagSources: summarizeTagSources(fallbackTags, input.existingTags) });
       return fallbackTags;
     }
   }
 
   private async classifyWithOllama(input: ClassificationInput): Promise<ParseResult | null> {
     const response = await this.callOllama(input);
-    return parseTags(parseJson(response), input.manualTags);
+    return parseTags(parseJson(response), input.manualTags, input.existingTags);
   }
 
   private logSuccess(result: ParseResult, attempts: number): void {
@@ -81,6 +79,7 @@ export class OllamaTaskClassifier implements TaskClassifier {
       attempts,
       normalized,
       ...(normalized ? { normalization: result.normalization } : {}),
+      tagSources: summarizeTagSources(result.tags, result.existingTags),
     });
   }
 
@@ -120,13 +119,17 @@ export class OllamaTaskClassifier implements TaskClassifier {
 
 function buildPrompt(input: ClassificationInput): string {
   const manualTags = input.manualTags.length > 0 ? input.manualTags.join(", ") : "none";
+  const existingTags = input.existingTags.length > 0 ? input.existingTags.join(", ") : "none";
   return [
-    "Classify this todo task for a personal task app.",
-    `Existing manual tags: ${manualTags}. Do not repeat an existing manual tag.`,
-    "Return 0 to 3 useful lowercase single-word tags.",
-    "Prefer broad reusable tags over one-off words.",
+    "You are tagging one todo item for a personal task app.",
+    "Choose tags from this reusable taxonomy when possible: work, home, health, finance, shopping, errands, family, travel, maintenance, admin, learning.",
+    "For ordinary action items, return at least one tag. Return an empty tags array only for gibberish, spam, or a task with no understandable topic.",
+    "Use broad intent: groceries and purchases are shopping; appointments and chores outside the home are errands; repairs are maintenance; cleaning and household chores are home; bills, insurance, tax, and money are finance; flights, hotels, and trips are travel; reading or study is learning; relatives are family.",
+    `Manual tags already on this task: ${manualTags}. Do not repeat these.`,
+    `Known tags already used by this user: ${existingTags}. Prefer these when they fit.`,
+    "Examples: Buy milk -> shopping; Schedule dentist appointment -> health, errands; Clean garage -> home; Pay car insurance bill -> finance; Call mom -> family; Book flight to Portland -> travel; Read TypeScript handbook -> learning; Fix leaking sink -> maintenance, home; Return Amazon package -> errands, shopping; Prepare interview presentation -> work.",
     `Title: ${input.title}`,
-    `Description: ${input.description ?? ""}`,
+    `Description: ${input.description ?? "(none)"}`,
   ].join("\n");
 }
 
@@ -145,10 +148,11 @@ type NormalizationSummary = {
 
 type ParseResult = {
   tags: ClassifiedTaskTag[];
+  existingTags: string[];
   normalization: NormalizationSummary;
 };
 
-function parseTags(value: unknown, manualTags: string[]): ParseResult | null {
+function parseTags(value: unknown, manualTags: string[], existingTags: string[]): ParseResult | null {
   if (!isRecord(value) || !Array.isArray(value.tags) || value.tags.length > MAX_TAGS) return null;
 
   const manualTagSet = new Set(manualTags);
@@ -179,6 +183,7 @@ function parseTags(value: unknown, manualTags: string[]): ParseResult | null {
 
   return {
     tags: [...tagsByName.values()].sort((left, right) => left.name.localeCompare(right.name)),
+    existingTags,
     normalization,
   };
 }

@@ -1,6 +1,6 @@
 import type { CreateTaskRequest, Task, TaskListResponse, UpdateTaskRequest } from "@porkpie/shared";
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000";
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
 
 export type TaskFilters = {
   search?: string;
@@ -41,7 +41,7 @@ export async function createTask(input: CreateTaskRequest): Promise<Task> {
 }
 
 export async function updateTask(id: string, input: UpdateTaskRequest): Promise<Task> {
-  const response = await fetch(`${apiBaseUrl}/api/tasks/${id}`, {
+  const response = await fetch(`${apiBaseUrl}/api/tasks/${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -51,7 +51,7 @@ export async function updateTask(id: string, input: UpdateTaskRequest): Promise<
 }
 
 export async function deleteTask(id: string): Promise<void> {
-  const response = await fetch(`${apiBaseUrl}/api/tasks/${id}`, { method: "DELETE" });
+  const response = await fetch(`${apiBaseUrl}/api/tasks/${encodeURIComponent(id)}`, { method: "DELETE" });
   await ensureOk(response);
 }
 

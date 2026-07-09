@@ -41,16 +41,14 @@ The task service depends on that context, not on a concrete OAuth/JWT/session pr
 
 ## AI seam
 
-Task classification is a replaceable service boundary, not mixed into CRUD handlers. The default implementation is deterministic and heuristic-based so tests remain stable. When `OLLAMA_BASE_URL` and `OLLAMA_MODEL` are configured, the server uses Ollama for structured JSON-schema tag suggestions. Invalid model output is retried once; if the retry is still unusable, or if the model call fails, the server falls back to the heuristic classifier. Classification emits one metadata-only log event per task creation path (`classifier`, `outcome`, `tagCount`, optional `model`/`reason`/`attempts`) without logging task title or description content. Harmless model mistakes, such as duplicate tag names or repeated manual tags, are normalized deterministically and reported with normalization counters so the team can see recurring failure modes and tighten the prompt/schema over time.
+Task classification is a replaceable service boundary, not mixed into CRUD handlers. The default implementation is deterministic and heuristic-based so tests remain stable. When `OLLAMA_BASE_URL` and `OLLAMA_MODEL` are configured, the server uses Ollama for structured JSON-schema tag suggestions. The service passes the user's existing tags into the classifier prompt so the model can reuse a semantically appropriate tag before inventing a new one. Invalid model output is retried once; if the retry is still unusable, or if the model call fails, the server falls back to the heuristic classifier. Classification emits one metadata-only log event per task creation path (`classifier`, `outcome`, `tagCount`, optional `model`/`reason`/`attempts`/`tagSources`) without logging task title or description content. Harmless model mistakes, such as duplicate tag names or repeated manual tags, are normalized deterministically and reported with normalization counters so the team can see recurring failure modes and tighten the prompt/schema over time.
 
 Current recommended local model:
 
 ```text
-OLLAMA_BASE_URL=http://ai1.lab:11434
+OLLAMA_BASE_URL=replace_with_reachable_ollama_host
 OLLAMA_MODEL=qwen3:8b
 OLLAMA_TIMEOUT_MS=5000
 ```
 
-Nice-to-have follow-ups:
-
-- Encourage reuse of existing tags when the model wants a semantically similar new tag.
+The demo lab environment uses `http://ai1.lab:11434`; contributors outside that network should point `OLLAMA_BASE_URL` at their own reachable Ollama host.

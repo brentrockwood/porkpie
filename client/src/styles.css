@@ -108,6 +108,16 @@
   display: inline-flex;
 }
 
+.ai-tag {
+  background: #f5f3ff;
+  border-color: #a78bfa;
+  color: #5b21b6;
+}
+
+.ai-tag .MuiChip-icon {
+  color: #7c3aed;
+}
+
 .task-edit-form {
   display: contents;
 }

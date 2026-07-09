@@ -181,6 +181,7 @@ export class PostgresTaskRepository implements TaskRepository {
 
       if (patch.tags !== undefined) {
         await replaceManualTags(client, id, patch.tags);
+        await replaceAiTags(client, id, []);
       }
 
       const tags = await loadTagsForTasks(client, [id]);
