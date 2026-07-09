@@ -167,6 +167,17 @@ describe("task API", () => {
     expect(response.body.error).toBe("title is required");
   });
 
+  it("rejects non-object request bodies", async () => {
+    const app = testApp();
+
+    const createResponse = await request(app).post("/api/tasks").send([]).expect(400);
+    expect(createResponse.body.error).toBe("request body must be an object");
+
+    const task = await request(app).post("/api/tasks").send({ title: "Valid task" }).expect(201);
+    const updateResponse = await request(app).patch(`/api/tasks/${task.body.task.id}`).send([]).expect(400);
+    expect(updateResponse.body.error).toBe("request body must be an object");
+  });
+
   it("returns 400 for malformed JSON", async () => {
     const app = testApp();
 

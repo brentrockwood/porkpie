@@ -37,6 +37,7 @@ export function App() {
   const [editingDescription, setEditingDescription] = useState("");
   const [editingTags, setEditingTags] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const reloadRequestId = useRef(0);
   const lastUrl = useRef(window.location.pathname + window.location.search);
 
@@ -101,6 +102,7 @@ export function App() {
   async function reloadTasks(signal?: AbortSignal) {
     const requestId = reloadRequestId.current + 1;
     reloadRequestId.current = requestId;
+    setIsLoadingTasks(true);
 
     try {
       setError(null);
@@ -114,12 +116,20 @@ export function App() {
         signal,
       );
       if (requestId !== reloadRequestId.current) return;
-      setTasks((current) => (page === 1 ? loaded.tasks : [...current, ...loaded.tasks]));
+      setTasks((current) => (page === 1 ? loaded.tasks : appendUniqueTasks(current, loaded.tasks)));
       setTotal(loaded.total);
       setTotalPages(loaded.totalPages);
+      if (pendingEditingId && !loaded.tasks.some((task) => task.id === pendingEditingId)) {
+        setPendingEditingId(null);
+      }
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
+      if (requestId !== reloadRequestId.current) return;
       setError(err instanceof Error ? err.message : "Failed to load tasks");
+    } finally {
+      if (requestId === reloadRequestId.current) {
+        setIsLoadingTasks(false);
+      }
     }
   }
 
@@ -282,7 +292,12 @@ export function App() {
         hasMore={page < totalPages}
         total={total}
         visibleCount={tasks.length}
-        onLoadMore={() => setPage((current) => current + 1)}
+        isLoading={isLoadingTasks}
+        onLoadMore={() => {
+          if (isLoadingTasks) return;
+          setIsLoadingTasks(true);
+          setPage((current) => current + 1);
+        }}
       />
 
       <TaskList
@@ -312,18 +327,31 @@ function parseTags(value: string): string[] {
   return [...new Set(value.split(",").map((tag) => tag.trim().toLowerCase()).filter(Boolean))];
 }
 
+function appendUniqueTasks(current: Task[], loaded: Task[]): Task[] {
+  const seen = new Set(current.map((task) => task.id));
+  return [...current, ...loaded.filter((task) => !seen.has(task.id))];
+}
+
 function readUrlState(): UrlState {
   const params = new URLSearchParams(window.location.search);
   const page = Number(params.get("page") ?? "1");
-  const editingId = window.location.pathname.split("/").filter(Boolean)[0] ?? null;
+  const rawEditingId = window.location.pathname.split("/").filter(Boolean)[0] ?? null;
 
   return {
     search: params.get("search") ?? "",
     tag: params.get("tag") ?? "",
     showCompleted: params.get("showCompleted") === "true",
     page: Number.isInteger(page) && page > 0 ? page : 1,
-    editingId: editingId ? decodeURIComponent(editingId) : null,
+    editingId: rawEditingId ? safeDecodeURIComponent(rawEditingId) : null,
   };
+}
+
+function safeDecodeURIComponent(value: string): string | null {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null;
+  }
 }
 
 function syncUrl(state: UrlState, lastUrl: { current: string }): void {

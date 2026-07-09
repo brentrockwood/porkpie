@@ -25,10 +25,11 @@ export class TaskService {
   }
 
   async createTask(auth: AuthContext, input: CreateTaskRequest): Promise<Task> {
-    const title = normalizeTitle(input.title);
+    const body = assertPlainObject(input);
+    const title = normalizeTitle(body.title);
 
-    const description = normalizeDescription(input.description);
-    const tags = normalizeTags(input.tags);
+    const description = normalizeDescription(body.description);
+    const tags = normalizeTags(body.tags);
 
     const existingTags = await this.repository.listTags(auth.userId);
 
@@ -43,25 +44,26 @@ export class TaskService {
   }
 
   updateTask(auth: AuthContext, id: string, input: UpdateTaskRequest): Promise<Task | null> {
+    const body = assertPlainObject(input);
     const patch: UpdateTaskRequest = {};
 
-    if (input.title !== undefined) {
-      patch.title = normalizeTitle(input.title);
+    if (body.title !== undefined) {
+      patch.title = normalizeTitle(body.title);
     }
 
-    if (input.description !== undefined) {
-      patch.description = normalizeDescription(input.description);
+    if (body.description !== undefined) {
+      patch.description = normalizeDescription(body.description);
     }
 
-    if (input.completed !== undefined) {
-      if (typeof input.completed !== "boolean") {
+    if (body.completed !== undefined) {
+      if (typeof body.completed !== "boolean") {
         throw new ValidationError("completed must be a boolean");
       }
-      patch.completed = input.completed;
+      patch.completed = body.completed;
     }
 
-    if (input.tags !== undefined) {
-      patch.tags = normalizeTags(input.tags);
+    if (body.tags !== undefined) {
+      patch.tags = normalizeTags(body.tags);
     }
 
     return this.repository.update(auth.userId, id, patch);
@@ -70,6 +72,14 @@ export class TaskService {
   deleteTask(auth: AuthContext, id: string): Promise<boolean> {
     return this.repository.delete(auth.userId, id);
   }
+}
+
+function assertPlainObject(value: unknown): Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new ValidationError("request body must be an object");
+  }
+
+  return value as Record<string, unknown>;
 }
 
 function normalizeTitle(value: unknown): string {

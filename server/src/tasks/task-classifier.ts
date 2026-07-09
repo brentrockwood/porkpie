@@ -63,7 +63,7 @@ export class HeuristicTaskClassifier implements TaskClassifier {
   }
 }
 
-function summarizeTagSources(tags: ClassifiedTaskTag[], existingTags: string[]): { existing: number; new: number } {
+export function summarizeTagSources(tags: ClassifiedTaskTag[], existingTags: string[]): { existing: number; new: number } {
   const existingTagSet = new Set(existingTags);
   const existing = tags.filter((tag) => existingTagSet.has(tag.name)).length;
   return { existing, new: tags.length - existing };

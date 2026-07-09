@@ -1,4 +1,4 @@
-import type { ClassifiedTaskTag, ClassificationInput, ClassifierLogger, TaskClassifier } from "./task-classifier.js";
+import { summarizeTagSources, type ClassifiedTaskTag, type ClassificationInput, type ClassifierLogger, type TaskClassifier } from "./task-classifier.js";
 
 export type OllamaTaskClassifierConfig = {
   baseUrl: string;
@@ -186,12 +186,6 @@ function parseTags(value: unknown, manualTags: string[], existingTags: string[])
     existingTags,
     normalization,
   };
-}
-
-function summarizeTagSources(tags: ClassifiedTaskTag[], existingTags: string[]): { existing: number; new: number } {
-  const existingTagSet = new Set(existingTags);
-  const existing = tags.filter((tag) => existingTagSet.has(tag.name)).length;
-  return { existing, new: tags.length - existing };
 }
 
 function hasNormalization(normalization: NormalizationSummary): boolean {

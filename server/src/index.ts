@@ -12,7 +12,7 @@ const repository = new PostgresTaskRepository(pool);
 const classifierLogger = (event: ClassifierLogEvent) => {
   console.log(JSON.stringify({ event: "task_classification", ...event }));
 };
-const fallbackClassifier = new HeuristicTaskClassifier();
+const fallbackClassifier = new HeuristicTaskClassifier(classifierLogger);
 const classifier: TaskClassifier = config.ollamaBaseUrl && config.ollamaModel
   ? new OllamaTaskClassifier({
       baseUrl: config.ollamaBaseUrl,
