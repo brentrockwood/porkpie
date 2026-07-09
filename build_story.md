@@ -348,6 +348,60 @@ The final design:
 
 That telemetry then pointed to the next refinement: passing the user's known tag vocabulary into the model prompt so it can reuse semantically appropriate existing tags before inventing new ones. That became one of the clearest senior-engineering narratives in the project: we started with validation and fallback, added observability, then used that observability model to decide which failures should become deterministic normalization and which should remain invalid.
 
+## Tuning the demo AI path
+
+The next AI pass made that tag-source telemetry useful in the product path:
+
+```text
+Encourage classifier reuse of existing tags
+```
+
+The task service now fetches the user's known tags and passes them into the classifier. The Ollama prompt tells the model to prefer a known tag when it is semantically appropriate, and classifier logs report how many returned tags reused existing vocabulary versus introduced new names. This kept the app from drifting into one-off model vocabulary and made the logs more actionable.
+
+A later cleanup clarified the lifecycle of AI tags. The classifier runs on task creation. If the user explicitly edits tags later, that manual set replaces previous AI suggestions. That rule is easy to explain in a demo: AI helps at creation time, but manual edits are the source of truth once the user expresses intent.
+
+We also tuned the Ollama prompt directly against the model instead of guessing. Title-only tasks like `Buy milk`, `Clean garage`, `Pay car insurance bill`, and `Call mom` initially returned too many empty classifications. Direct `/api/generate` checks showed the prompt was too permissive, so we moved to a small reusable taxonomy and concrete examples:
+
+```text
+Buy milk -> shopping
+Clean garage -> home
+Pay car insurance bill -> finance
+Call mom -> family
+```
+
+That tuning was then verified through the app server. The point was not that the prompt became perfect. The point was that prompt changes were treated like any other integration behavior: test representative cases by hand, encode the stable intent in code/tests, and keep deterministic validation/fallback around the model.
+
+## Making the demo real on devices
+
+The demo environment also needed to work on a phone or tablet on the local network, not only on the developer's laptop. The Vite dev server now binds to `0.0.0.0`, and the browser client defaults to same-origin `/api` calls through Vite's proxy. That prevents the classic mobile-demo bug where the phone tries to call its own `localhost:4000` instead of the developer machine.
+
+The compose path passes the Ollama settings into the server container, and the README now has a short demo script:
+
+1. Open `http://<computer-lan-ip>:5173`.
+2. Create `Buy milk` and observe the AI `shopping` chip.
+3. Tap the tag chip to filter.
+4. Edit tags manually and see manual intent replace prior AI suggestions.
+
+This turned the project from “works on my laptop” into a more credible craft-interview artifact: a mobile-friendly UI, a reachable dev server, and a documented path to verify the AI behavior before the interview.
+
+## Stability and review polish
+
+The latest cleanup work focused on the kinds of small issues senior engineers tend to notice during review:
+
+- malformed URL path segments no longer crash the app during decode,
+- stale task-loading failures cannot overwrite a newer successful request,
+- appended `Load more` pages deduplicate task IDs,
+- rapid Load more clicks are ignored while a page request is in flight,
+- unresolved deep-link edit IDs are cleared after a completed load,
+- update/delete API URLs encode task IDs,
+- non-object JSON request bodies return 400 instead of falling into 500s,
+- browser smoke tests wait longer for fresh containers and clean up browser sessions/tasks on exit,
+- seed-data production guards were tightened,
+- in-memory repository tests return defensive tag copies,
+- fallback classifier telemetry remains visible even when Ollama is configured.
+
+The UI also now makes AI tags visibly distinct with a subtle sparkle chip and confidence tooltip. That is a small design choice, but it improves the demo conversation: viewers can immediately see which metadata came from the model and which tags were manually chosen.
+
 ## How the pull-request loop shaped the app
 
 The git history tells a story of small increments rather than one large drop:
@@ -372,6 +426,11 @@ Add optional Ollama task classifier
 Add task classifier observability
 Retry invalid Ollama classifier responses
 Tighten classifier schema telemetry
+Encourage classifier reuse of existing tags
+Remove AI tags when editing tags
+Enable Ollama for the demo environment
+Enable LAN access for the dev client
+Polish demo stability and AI tag UX
 ```
 
 Several themes repeat across the session:
@@ -398,8 +457,13 @@ By the end of this build sequence, Porkpie is no longer just a TODO app. It is a
 - URL-backed UI state.
 - Manual and AI tag sources with confidence metadata.
 - Optional Ollama classifier with JSON Schema output.
+- Directly tuned demo prompt for title-only tasks.
+- Create-only AI tagging with manual edits taking precedence.
+- Distinct AI tag chips with confidence tooltip.
+- LAN-accessible mobile demo setup through Vite proxy.
 - Deterministic fallback and normalization.
 - Metadata-only classifier observability.
+- Stability polish around URL parsing, stale loads, load-more dedupe, request validation, and smoke-test cleanup.
 
 Most importantly, it supports the original interview prompt. A walkthrough can begin with the UI, trace a create-task action through the client, API, service, repository, database, classifier, and logs, then branch into architecture discussions about tests, security, 12-factor config, AI boundaries, future auth, search, chat ingestion, and Python analysis.
 
