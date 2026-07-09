@@ -4,6 +4,7 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [react()],
   server: {
+    allowedHosts: ["tasks.brentrockwood.net", "dh1.lab", "ws5.lab"],
     host: "0.0.0.0",
     port: 5173,
     proxy: {
