@@ -288,18 +288,6 @@ export function App() {
         </Alert>
       ) : null}
 
-      <LoadMoreControls
-        hasMore={page < totalPages}
-        total={total}
-        visibleCount={tasks.length}
-        isLoading={isLoadingTasks}
-        onLoadMore={() => {
-          if (isLoadingTasks) return;
-          setIsLoadingTasks(true);
-          setPage((current) => current + 1);
-        }}
-      />
-
       <TaskList
         tasks={tasks}
         hasActiveFilters={Boolean(debouncedSearchFilter || tagFilter)}
@@ -318,6 +306,18 @@ export function App() {
         onEditingDescriptionChange={setEditingDescription}
         onEditingTagsChange={setEditingTags}
         onTagClick={handleTagClick}
+      />
+
+      <LoadMoreControls
+        hasMore={page < totalPages}
+        total={total}
+        visibleCount={tasks.length}
+        isLoading={isLoadingTasks}
+        onLoadMore={() => {
+          if (isLoadingTasks) return;
+          setIsLoadingTasks(true);
+          setPage((current) => current + 1);
+        }}
       />
     </Container>
   );

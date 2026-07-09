@@ -14,6 +14,7 @@ describeSystem("task API system test", () => {
   let pool: Pool;
 
   beforeAll(async () => {
+    assertSystemTestDatabaseAllowed(databaseUrl!);
     await runMigrations(databaseUrl!);
     pool = createPool(databaseUrl!);
   });
@@ -215,3 +216,9 @@ describeSystem("task API system test", () => {
     expect(after.rows[0].count).toBe(before.rows[0].count);
   });
 });
+
+function assertSystemTestDatabaseAllowed(url: string): void {
+  if (process.env.NODE_ENV === "production" || /prod/i.test(url)) {
+    throw new Error("Refusing to run system tests against a production-looking database URL");
+  }
+}
