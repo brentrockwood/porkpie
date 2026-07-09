@@ -132,6 +132,33 @@ describeSystem("task API system test", () => {
     expect(rows.rows).toEqual([{ name: "work", source: "ai", confidence: 0.85 }]);
   });
 
+  it("removes AI tags when tags are edited manually", async () => {
+    const app = createApp(new TaskService(new PostgresTaskRepository(pool)));
+
+    const created = await request(app)
+      .post("/api/tasks")
+      .send({ title: "Prepare interview presentation", description: "Review architecture notes" })
+      .expect(201);
+
+    expect(created.body.task.tags).toEqual([{ name: "work", source: "ai", confidence: 0.85 }]);
+
+    const updated = await request(app)
+      .patch(`/api/tasks/${created.body.task.id}`)
+      .send({ tags: ["follow-up"] })
+      .expect(200);
+
+    expect(updated.body.task.tags).toEqual([{ name: "follow-up", source: "manual", confidence: null }]);
+
+    const rows = await pool.query(
+      `SELECT tags.name, task_tags.source, task_tags.confidence::float AS confidence
+       FROM task_tags
+       JOIN tags ON tags.id = task_tags.tag_id
+       WHERE task_tags.task_id = $1`,
+      [created.body.task.id],
+    );
+    expect(rows.rows).toEqual([{ name: "follow-up", source: "manual", confidence: null }]);
+  });
+
   it("paginates task lists with metadata", async () => {
     const app = createApp(new TaskService(new PostgresTaskRepository(pool)));
 
