@@ -42,6 +42,9 @@ describe("OllamaTaskClassifier", () => {
       properties: { tags: { uniqueItems: true, items: { properties: { name: { pattern: "^[a-z][a-z0-9-]{0,31}$" } } } } },
     });
     expect(body.prompt).toContain("Known tags already used by this user: health, work");
+    expect(body.prompt).toContain("For ordinary action items, return at least one tag");
+    expect(body.prompt).toContain("groceries and purchases are shopping");
+    expect(body.prompt).toContain("Buy milk -> shopping");
     expect(logger).toHaveBeenCalledWith({ classifier: "ollama", outcome: "success", tagCount: 1, model: "qwen3:8b", attempts: 1, normalized: false, tagSources: { existing: 1, new: 0 } });
   });
 

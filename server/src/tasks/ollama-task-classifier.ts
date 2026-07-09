@@ -121,13 +121,15 @@ function buildPrompt(input: ClassificationInput): string {
   const manualTags = input.manualTags.length > 0 ? input.manualTags.join(", ") : "none";
   const existingTags = input.existingTags.length > 0 ? input.existingTags.join(", ") : "none";
   return [
-    "Classify this todo task for a personal task app.",
-    `Existing manual tags on this task: ${manualTags}. Do not repeat an existing manual tag.`,
-    `Known tags already used by this user: ${existingTags}. Prefer one of these known tags when it is semantically appropriate.`,
-    "Return 0 to 3 useful lowercase single-word tags.",
-    "Prefer broad reusable tags over one-off words.",
+    "You are tagging one todo item for a personal task app.",
+    "Choose tags from this reusable taxonomy when possible: work, home, health, finance, shopping, errands, family, travel, maintenance, admin, learning.",
+    "For ordinary action items, return at least one tag. Return an empty tags array only for gibberish, spam, or a task with no understandable topic.",
+    "Use broad intent: groceries and purchases are shopping; appointments and chores outside the home are errands; repairs are maintenance; cleaning and household chores are home; bills, insurance, tax, and money are finance; flights, hotels, and trips are travel; reading or study is learning; relatives are family.",
+    `Manual tags already on this task: ${manualTags}. Do not repeat these.`,
+    `Known tags already used by this user: ${existingTags}. Prefer these when they fit.`,
+    "Examples: Buy milk -> shopping; Schedule dentist appointment -> health, errands; Clean garage -> home; Pay car insurance bill -> finance; Call mom -> family; Book flight to Portland -> travel; Read TypeScript handbook -> learning; Fix leaking sink -> maintenance, home; Return Amazon package -> errands, shopping; Prepare interview presentation -> work.",
     `Title: ${input.title}`,
-    `Description: ${input.description ?? ""}`,
+    `Description: ${input.description ?? "(none)"}`,
   ].join("\n");
 }
 
