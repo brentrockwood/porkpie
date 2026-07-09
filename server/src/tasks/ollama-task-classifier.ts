@@ -45,22 +45,16 @@ export class OllamaTaskClassifier implements TaskClassifier {
     let attempts = 0;
 
     try {
-      attempts = 1;
-      const firstAttempt = await this.classifyWithOllama(input);
-      if (firstAttempt) {
-        this.logSuccess(firstAttempt, 1);
-        return firstAttempt.tags;
-      }
-
-      attempts = 2;
-      const secondAttempt = await this.classifyWithOllama(input);
-      if (secondAttempt) {
-        this.logSuccess(secondAttempt, 2);
-        return secondAttempt.tags;
+      for (attempts = 1; attempts <= 2; attempts += 1) {
+        const result = await this.classifyWithOllama(input);
+        if (result) {
+          this.logSuccess(result, attempts);
+          return result.tags;
+        }
       }
 
       const fallbackTags = await this.config.fallback.classify(input);
-      this.config.logger?.({ classifier: "ollama", outcome: "fallback", tagCount: fallbackTags.length, model: this.config.model, reason: "invalid_response", attempts: 2, tagSources: summarizeTagSources(fallbackTags, input.existingTags) });
+      this.config.logger?.({ classifier: "ollama", outcome: "fallback", tagCount: fallbackTags.length, model: this.config.model, reason: "invalid_response", attempts: attempts - 1, tagSources: summarizeTagSources(fallbackTags, input.existingTags) });
       return fallbackTags;
     } catch (error) {
       console.warn("Ollama task classification failed; using heuristic fallback", error);

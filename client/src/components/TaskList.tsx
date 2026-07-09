@@ -20,7 +20,7 @@ type TaskListProps = {
   availableTags: string[];
   onToggle: (task: Task) => void;
   onStartEditing: (task: Task) => void;
-  onSave: (task: Task, tagsOverride?: string) => void;
+  onSave: (task: Task) => void;
   onCancelEditing: () => void;
   onDelete: (task: Task) => void;
   onEditingTitleChange: (value: string) => void;
@@ -128,7 +128,6 @@ export function TaskList({
                     availableTags={availableTags}
                     label="Tags"
                     onChange={onEditingTagsChange}
-                    onEnter={(nextTags) => onSave(task, nextTags)}
                     placeholder="Tags"
                     value={editingTags}
                   />

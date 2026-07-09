@@ -129,8 +129,8 @@ agent-browser click ".task-card:first-of-type .task-open-button" >/dev/null
 agent-browser fill ".task-card:first-of-type .edit-fields input:first-of-type" "$UPDATED_TITLE" >/dev/null
 agent-browser fill ".task-card:first-of-type .edit-fields textarea" "$UPDATED_DESCRIPTION" >/dev/null
 agent-browser fill ".task-card:first-of-type .edit-fields input[placeholder='Tags']" "$UPDATED_TAG" >/dev/null
-agent-browser press Tab >/dev/null
 agent-browser press Enter >/dev/null
+agent-browser click ".task-card:first-of-type .task-actions button" >/dev/null
 
 for _ in {1..20}; do
   page_text="$(agent-browser get text body)"
