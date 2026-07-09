@@ -15,4 +15,10 @@ describe("seedDemoData", () => {
       "Refusing to run demo seed against a production environment",
     );
   });
+
+  it("refuses production-looking database URLs", async () => {
+    await expect(seedDemoData("myproddb-local-demo-url")).rejects.toThrow(
+      "Refusing to run demo seed: databaseUrl looks like a production connection string",
+    );
+  });
 });

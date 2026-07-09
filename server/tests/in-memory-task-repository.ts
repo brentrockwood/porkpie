@@ -76,7 +76,10 @@ export class InMemoryTaskRepository implements TaskRepository {
 
 function stripUserId(task: Task & { userId: string }): Task {
   const { userId: _userId, ...rest } = task;
-  return rest;
+  return {
+    ...rest,
+    tags: rest.tags.map((tag) => ({ ...tag })),
+  };
 }
 
 function normalizeTags(names: string[], aiTags: { name: string; confidence: number }[] = []): Task["tags"] {

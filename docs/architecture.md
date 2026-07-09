@@ -46,7 +46,9 @@ Task classification is a replaceable service boundary, not mixed into CRUD handl
 Current recommended local model:
 
 ```text
-OLLAMA_BASE_URL=http://ai1.lab:11434
+OLLAMA_BASE_URL=replace_with_reachable_ollama_host
 OLLAMA_MODEL=qwen3:8b
 OLLAMA_TIMEOUT_MS=5000
 ```
+
+The demo lab environment uses `http://ai1.lab:11434`; contributors outside that network should point `OLLAMA_BASE_URL` at their own reachable Ollama host.

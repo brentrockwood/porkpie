@@ -36,7 +36,7 @@ function assertSeedAllowed(databaseUrl: string): void {
     throw new Error("Refusing to run demo seed against a production environment");
   }
 
-  if (/\b(prod|production)\b/i.test(databaseUrl)) {
+  if (/prod/i.test(databaseUrl)) {
     throw new Error("Refusing to run demo seed: databaseUrl looks like a production connection string");
   }
 }

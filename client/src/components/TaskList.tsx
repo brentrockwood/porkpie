@@ -2,6 +2,7 @@ import type { KeyboardEvent, MouseEvent } from "react";
 import type { Task } from "@porkpie/shared";
 import type { TaskFilters } from "../api";
 import { Box, Checkbox, Chip, IconButton, Paper, Stack, TextField, Typography } from "@mui/material";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import CancelIcon from "@mui/icons-material/Close";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -168,7 +169,16 @@ export function TaskList({
                 <Box className="tags" component="ul" aria-label={`Tags for ${task.title}`} onClick={stopCardEdit} onKeyDown={(event) => event.stopPropagation()}>
                   {task.tags.map((tag) => (
                     <li key={`${tag.source}:${tag.name}`}>
-                      <Chip component="button" label={tag.name} onClick={() => onTagClick(tag.name)} size="small" />
+                      <Chip
+                        className={tag.source === "ai" ? "ai-tag" : undefined}
+                        component="button"
+                        icon={tag.source === "ai" ? <AutoAwesomeIcon /> : undefined}
+                        label={tag.name}
+                        onClick={() => onTagClick(tag.name)}
+                        size="small"
+                        title={tag.source === "ai" ? `AI suggested tag (${Math.round((tag.confidence ?? 0) * 100)}% confidence)` : "Manual tag"}
+                        variant={tag.source === "ai" ? "outlined" : "filled"}
+                      />
                     </li>
                   ))}
                 </Box>
