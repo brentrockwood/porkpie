@@ -42,13 +42,17 @@ export class OllamaTaskClassifier implements TaskClassifier {
   }
 
   async classify(input: ClassificationInput): Promise<ClassifiedTaskTag[]> {
+    let attempts = 0;
+
     try {
+      attempts = 1;
       const firstAttempt = await this.classifyWithOllama(input);
       if (firstAttempt) {
         this.logSuccess(firstAttempt, 1);
         return firstAttempt.tags;
       }
 
+      attempts = 2;
       const secondAttempt = await this.classifyWithOllama(input);
       if (secondAttempt) {
         this.logSuccess(secondAttempt, 2);
@@ -56,19 +60,19 @@ export class OllamaTaskClassifier implements TaskClassifier {
       }
 
       const fallbackTags = await this.config.fallback.classify(input);
-      this.config.logger?.({ classifier: "ollama", outcome: "fallback", tagCount: fallbackTags.length, model: this.config.model, reason: "invalid_response", attempts: 2 });
+      this.config.logger?.({ classifier: "ollama", outcome: "fallback", tagCount: fallbackTags.length, model: this.config.model, reason: "invalid_response", attempts: 2, tagSources: summarizeTagSources(fallbackTags, input.existingTags) });
       return fallbackTags;
     } catch (error) {
       console.warn("Ollama task classification failed; using heuristic fallback", error);
       const fallbackTags = await this.config.fallback.classify(input);
-      this.config.logger?.({ classifier: "ollama", outcome: "fallback", tagCount: fallbackTags.length, model: this.config.model, reason: "error", attempts: 1 });
+      this.config.logger?.({ classifier: "ollama", outcome: "fallback", tagCount: fallbackTags.length, model: this.config.model, reason: "error", attempts, tagSources: summarizeTagSources(fallbackTags, input.existingTags) });
       return fallbackTags;
     }
   }
 
   private async classifyWithOllama(input: ClassificationInput): Promise<ParseResult | null> {
     const response = await this.callOllama(input);
-    return parseTags(parseJson(response), input.manualTags);
+    return parseTags(parseJson(response), input.manualTags, input.existingTags);
   }
 
   private logSuccess(result: ParseResult, attempts: number): void {
@@ -81,6 +85,7 @@ export class OllamaTaskClassifier implements TaskClassifier {
       attempts,
       normalized,
       ...(normalized ? { normalization: result.normalization } : {}),
+      tagSources: summarizeTagSources(result.tags, result.existingTags),
     });
   }
 
@@ -120,9 +125,11 @@ export class OllamaTaskClassifier implements TaskClassifier {
 
 function buildPrompt(input: ClassificationInput): string {
   const manualTags = input.manualTags.length > 0 ? input.manualTags.join(", ") : "none";
+  const existingTags = input.existingTags.length > 0 ? input.existingTags.join(", ") : "none";
   return [
     "Classify this todo task for a personal task app.",
-    `Existing manual tags: ${manualTags}. Do not repeat an existing manual tag.`,
+    `Existing manual tags on this task: ${manualTags}. Do not repeat an existing manual tag.`,
+    `Known tags already used by this user: ${existingTags}. Prefer one of these known tags when it is semantically appropriate.`,
     "Return 0 to 3 useful lowercase single-word tags.",
     "Prefer broad reusable tags over one-off words.",
     `Title: ${input.title}`,
@@ -145,10 +152,11 @@ type NormalizationSummary = {
 
 type ParseResult = {
   tags: ClassifiedTaskTag[];
+  existingTags: string[];
   normalization: NormalizationSummary;
 };
 
-function parseTags(value: unknown, manualTags: string[]): ParseResult | null {
+function parseTags(value: unknown, manualTags: string[], existingTags: string[]): ParseResult | null {
   if (!isRecord(value) || !Array.isArray(value.tags) || value.tags.length > MAX_TAGS) return null;
 
   const manualTagSet = new Set(manualTags);
@@ -179,8 +187,15 @@ function parseTags(value: unknown, manualTags: string[]): ParseResult | null {
 
   return {
     tags: [...tagsByName.values()].sort((left, right) => left.name.localeCompare(right.name)),
+    existingTags,
     normalization,
   };
+}
+
+function summarizeTagSources(tags: ClassifiedTaskTag[], existingTags: string[]): { existing: number; new: number } {
+  const existingTagSet = new Set(existingTags);
+  const existing = tags.filter((tag) => existingTagSet.has(tag.name)).length;
+  return { existing, new: tags.length - existing };
 }
 
 function hasNormalization(normalization: NormalizationSummary): boolean {

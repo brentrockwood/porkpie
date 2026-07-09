@@ -2,6 +2,7 @@ export type ClassificationInput = {
   title: string;
   description: string | null;
   manualTags: string[];
+  existingTags: string[];
 };
 
 export type ClassifiedTaskTag = {
@@ -20,6 +21,10 @@ export type ClassifierLogEvent = {
   normalization?: {
     duplicateTagNames?: number;
     manualTagDuplicates?: number;
+  };
+  tagSources?: {
+    existing: number;
+    new: number;
   };
 };
 
@@ -53,9 +58,15 @@ export class HeuristicTaskClassifier implements TaskClassifier {
       .map((rule) => ({ name: rule.tag, confidence: rule.confidence }))
       .sort((left, right) => left.name.localeCompare(right.name));
 
-    this.logger?.({ classifier: "heuristic", outcome: tags.length > 0 ? "success" : "empty", tagCount: tags.length });
+    this.logger?.({ classifier: "heuristic", outcome: tags.length > 0 ? "success" : "empty", tagCount: tags.length, tagSources: summarizeTagSources(tags, input.existingTags) });
     return tags;
   }
+}
+
+function summarizeTagSources(tags: ClassifiedTaskTag[], existingTags: string[]): { existing: number; new: number } {
+  const existingTagSet = new Set(existingTags);
+  const existing = tags.filter((tag) => existingTagSet.has(tag.name)).length;
+  return { existing, new: tags.length - existing };
 }
 
 function hasWord(text: string, word: string): boolean {

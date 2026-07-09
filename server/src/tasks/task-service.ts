@@ -30,13 +30,15 @@ export class TaskService {
     const description = normalizeDescription(input.description);
     const tags = normalizeTags(input.tags);
 
+    const existingTags = await this.repository.listTags(auth.userId);
+
     return this.repository.create({
       id: randomUUID(),
       userId: auth.userId,
       title,
       description,
       tags,
-      aiTags: await this.classifier.classify({ title, description, manualTags: tags }),
+      aiTags: await this.classifier.classify({ title, description, manualTags: tags, existingTags }),
     });
   }
 
