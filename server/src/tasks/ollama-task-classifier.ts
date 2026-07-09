@@ -20,12 +20,13 @@ const responseSchema = {
       type: "array",
       minItems: 0,
       maxItems: MAX_TAGS,
+      uniqueItems: true,
       items: {
         type: "object",
         additionalProperties: false,
         required: ["name", "confidence"],
         properties: {
-          name: { type: "string" },
+          name: { type: "string", pattern: "^[a-z][a-z0-9-]{0,31}$" },
           confidence: { type: "number", minimum: 0, maximum: 1 },
         },
       },
@@ -44,14 +45,14 @@ export class OllamaTaskClassifier implements TaskClassifier {
     try {
       const firstAttempt = await this.classifyWithOllama(input);
       if (firstAttempt) {
-        this.config.logger?.({ classifier: "ollama", outcome: firstAttempt.length > 0 ? "success" : "empty", tagCount: firstAttempt.length, model: this.config.model, attempts: 1 });
-        return firstAttempt;
+        this.logSuccess(firstAttempt, 1);
+        return firstAttempt.tags;
       }
 
       const secondAttempt = await this.classifyWithOllama(input);
       if (secondAttempt) {
-        this.config.logger?.({ classifier: "ollama", outcome: secondAttempt.length > 0 ? "success" : "empty", tagCount: secondAttempt.length, model: this.config.model, attempts: 2 });
-        return secondAttempt;
+        this.logSuccess(secondAttempt, 2);
+        return secondAttempt.tags;
       }
 
       const fallbackTags = await this.config.fallback.classify(input);
@@ -65,9 +66,22 @@ export class OllamaTaskClassifier implements TaskClassifier {
     }
   }
 
-  private async classifyWithOllama(input: ClassificationInput): Promise<ClassifiedTaskTag[] | null> {
+  private async classifyWithOllama(input: ClassificationInput): Promise<ParseResult | null> {
     const response = await this.callOllama(input);
     return parseTags(parseJson(response), input.manualTags);
+  }
+
+  private logSuccess(result: ParseResult, attempts: number): void {
+    const normalized = hasNormalization(result.normalization);
+    this.config.logger?.({
+      classifier: "ollama",
+      outcome: result.tags.length > 0 ? "success" : "empty",
+      tagCount: result.tags.length,
+      model: this.config.model,
+      attempts,
+      normalized,
+      ...(normalized ? { normalization: result.normalization } : {}),
+    });
   }
 
   private async callOllama(input: ClassificationInput): Promise<string> {
@@ -124,25 +138,53 @@ function parseJson(value: string): unknown {
   }
 }
 
-function parseTags(value: unknown, manualTags: string[]): ClassifiedTaskTag[] | null {
+type NormalizationSummary = {
+  duplicateTagNames?: number;
+  manualTagDuplicates?: number;
+};
+
+type ParseResult = {
+  tags: ClassifiedTaskTag[];
+  normalization: NormalizationSummary;
+};
+
+function parseTags(value: unknown, manualTags: string[]): ParseResult | null {
   if (!isRecord(value) || !Array.isArray(value.tags) || value.tags.length > MAX_TAGS) return null;
 
   const manualTagSet = new Set(manualTags);
-  const seen = new Set<string>();
-  const tags: ClassifiedTaskTag[] = [];
+  const tagsByName = new Map<string, ClassifiedTaskTag>();
+  const normalization: NormalizationSummary = {};
 
   for (const tag of value.tags) {
     if (!isRecord(tag) || typeof tag.name !== "string" || typeof tag.confidence !== "number") return null;
 
     const name = tag.name.trim().toLowerCase();
     if (!isValidTagName(name) || !Number.isFinite(tag.confidence) || tag.confidence < 0 || tag.confidence > 1) return null;
-    if (manualTagSet.has(name) || seen.has(name)) continue;
+    if (manualTagSet.has(name)) {
+      normalization.manualTagDuplicates = (normalization.manualTagDuplicates ?? 0) + 1;
+      continue;
+    }
 
-    seen.add(name);
-    tags.push({ name, confidence: tag.confidence });
+    const existing = tagsByName.get(name);
+    if (existing) {
+      normalization.duplicateTagNames = (normalization.duplicateTagNames ?? 0) + 1;
+      if (tag.confidence > existing.confidence) {
+        tagsByName.set(name, { name, confidence: tag.confidence });
+      }
+      continue;
+    }
+
+    tagsByName.set(name, { name, confidence: tag.confidence });
   }
 
-  return tags.sort((left, right) => left.name.localeCompare(right.name));
+  return {
+    tags: [...tagsByName.values()].sort((left, right) => left.name.localeCompare(right.name)),
+    normalization,
+  };
+}
+
+function hasNormalization(normalization: NormalizationSummary): boolean {
+  return normalization.duplicateTagNames !== undefined || normalization.manualTagDuplicates !== undefined;
 }
 
 function isValidTagName(value: string): boolean {

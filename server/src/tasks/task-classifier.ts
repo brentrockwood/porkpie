@@ -16,6 +16,11 @@ export type ClassifierLogEvent = {
   model?: string;
   reason?: "error" | "invalid_response";
   attempts?: number;
+  normalized?: boolean;
+  normalization?: {
+    duplicateTagNames?: number;
+    manualTagDuplicates?: number;
+  };
 };
 
 export type ClassifierLogger = (event: ClassifierLogEvent) => void;

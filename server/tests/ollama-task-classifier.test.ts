@@ -37,11 +37,14 @@ describe("OllamaTaskClassifier", () => {
     );
     const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)) as { format?: unknown; model?: unknown };
     expect(body.model).toBe("qwen3:8b");
-    expect(body.format).toMatchObject({ required: ["tags"] });
-    expect(logger).toHaveBeenCalledWith({ classifier: "ollama", outcome: "success", tagCount: 1, model: "qwen3:8b", attempts: 1 });
+    expect(body.format).toMatchObject({
+      required: ["tags"],
+      properties: { tags: { uniqueItems: true, items: { properties: { name: { pattern: "^[a-z][a-z0-9-]{0,31}$" } } } } },
+    });
+    expect(logger).toHaveBeenCalledWith({ classifier: "ollama", outcome: "success", tagCount: 1, model: "qwen3:8b", attempts: 1, normalized: false });
   });
 
-  it("filters manual duplicates from valid model tags", async () => {
+  it("normalizes manual duplicates and duplicate model tag names with actionable telemetry", async () => {
     globalThis.fetch = vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -49,6 +52,7 @@ describe("OllamaTaskClassifier", () => {
             tags: [
               { name: "work", confidence: 0.9 },
               { name: "health", confidence: 0.7 },
+              { name: "health", confidence: 0.8 },
             ],
           }),
         }),
@@ -56,11 +60,21 @@ describe("OllamaTaskClassifier", () => {
       ),
     );
 
-    const classifier = new OllamaTaskClassifier({ baseUrl: "http://ollama.example:11434", model: "qwen3:8b", fallback: fallback([]) });
+    const logger = vi.fn();
+    const classifier = new OllamaTaskClassifier({ baseUrl: "http://ollama.example:11434", model: "qwen3:8b", fallback: fallback([]), logger });
 
     await expect(classifier.classify({ title: "Task", description: null, manualTags: ["work"] })).resolves.toEqual([
-      { name: "health", confidence: 0.7 },
+      { name: "health", confidence: 0.8 },
     ]);
+    expect(logger).toHaveBeenCalledWith({
+      classifier: "ollama",
+      outcome: "success",
+      tagCount: 1,
+      model: "qwen3:8b",
+      attempts: 1,
+      normalized: true,
+      normalization: { duplicateTagNames: 1, manualTagDuplicates: 1 },
+    });
   });
 
   it("accepts an empty tag list as a valid model answer", async () => {
@@ -75,7 +89,7 @@ describe("OllamaTaskClassifier", () => {
     });
 
     await expect(classifier.classify({ title: "Task", description: null, manualTags: [] })).resolves.toEqual([]);
-    expect(logger).toHaveBeenCalledWith({ classifier: "ollama", outcome: "empty", tagCount: 0, model: "qwen3:8b", attempts: 1 });
+    expect(logger).toHaveBeenCalledWith({ classifier: "ollama", outcome: "empty", tagCount: 0, model: "qwen3:8b", attempts: 1, normalized: false });
   });
 
   it("retries once when Ollama returns invalid tags", async () => {
@@ -97,7 +111,7 @@ describe("OllamaTaskClassifier", () => {
       { name: "work", confidence: 0.85 },
     ]);
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(logger).toHaveBeenCalledWith({ classifier: "ollama", outcome: "success", tagCount: 1, model: "qwen3:8b", attempts: 2 });
+    expect(logger).toHaveBeenCalledWith({ classifier: "ollama", outcome: "success", tagCount: 1, model: "qwen3:8b", attempts: 2, normalized: false });
   });
 
   it("uses fallback tags after two invalid Ollama responses", async () => {
